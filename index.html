@@ -88,7 +88,9 @@
   .seeall { position:absolute; right:16px; top:8px; width:150px; height:88px; border-radius:44px;
             color: var(--soft); font-size:24px; display:flex; align-items:center; justify-content:center; }
   .seeall:active { opacity:.6; }
-  .corner { position:absolute; left:0; bottom:0; width:110px; height:110px; }
+  .parentbtn { position:absolute; left:16px; top:8px; width:190px; height:88px; border-radius:44px;
+               color: var(--soft); font-size:24px; display:flex; align-items:center; justify-content:center; }
+  .parentbtn:active { opacity:.6; }
 
   /* ---------- overview / reorder ---------- */
   .sheet { position:fixed; top:0; left:0; right:0; bottom:0; background: var(--bg);
@@ -405,7 +407,7 @@
     }
     return '<div class="footer">' + out +
       '<button class="seeall" data-act="all">See all</button>' +
-      '<div class="corner" id="corner"></div></div>';
+      '<button class="parentbtn" data-act="parent">Parent setup</button></div>';
   }
 
   function medallion(id) {
@@ -486,7 +488,6 @@
     if (view === 'all') { app.innerHTML = allHTML(); return; }
     if (view === 'parent') { app.innerHTML = parentHTML(); return; }
     app.innerHTML = ambientHTML() + '<div class="stage" id="stage">' + stepPaneHTML() + '</div>' + dotsHTML();
-    bindCorner();
   }
 
   function advance(mutate) {
@@ -520,6 +521,7 @@
     if (act === 'done') { completeAndAdvance(currentId()); return; }
     if (act === 'park') { var id = currentId(); advance(function () { park(id); }); return; }
     if (act === 'all') { view = 'all'; render(); return; }
+    if (act === 'parent') { view = 'parent'; render(); return; }
     if (act === 'back') { saveParentFields(); view = 'step'; render(); return; }
     if (act === 'theme') { p.theme = el.getAttribute('data-id'); themeOverride = null; writeStore(); render(); return; }
     if (act === 'celeb') { p.celebrate = !p.celebrate; writeStore(); render(); return; }
@@ -552,24 +554,6 @@
     writeStore();
   }
 
-  // Parent settings: 3-second long-press in the bottom-left corner. No visible button.
-  function bindCorner() {
-    var c = document.getElementById('corner');
-    if (!c) return;
-    var timer = null;
-    var start = function () {
-      clear();
-      timer = window.setTimeout(function () { view = 'parent'; render(); }, 3000);
-    };
-    var clear = function () { if (timer) { window.clearTimeout(timer); timer = null; } };
-    c.addEventListener('touchstart', start, false);
-    c.addEventListener('touchend', clear, false);
-    c.addEventListener('touchcancel', clear, false);
-    c.addEventListener('touchmove', clear, false);
-    c.addEventListener('mousedown', start, false);
-    c.addEventListener('mouseup', clear, false);
-    c.addEventListener('mouseleave', clear, false);
-  }
 
   // Appliance feel: no rubber-band scrolling, no pinch zoom.
   document.addEventListener('touchmove', function (e) {

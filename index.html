@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+  ==========================================================================
+  MORNING ROUTINE — testable mockup
+  TARGET: original iPad Air (2013), iOS 12.5.8, Safari, landscape 1024x768.
+  This Safari is from 2018. DO NOT REINTRODUCE:
+    - optional chaining (?.), nullish coalescing (??), logical assignment (||=)
+    - Array.flat / flatMap, Object.fromEntries, String.replaceAll
+    - top-level await, dynamic import(), ResizeObserver, IntersectionObserver
+    - flexbox `gap` (grid-gap is fine; otherwise use margins)
+    - CSS aspect-ratio, :is(), :where(), inset, nested clamp()
+    - HTML5 drag-and-drop API (dead on iOS touch)
+    - var() inside SVG presentation attributes (use style="stroke:var(--x)")
+  ES2017 ceiling. const/let, arrow fns, template literals, promises,
+  async/await, flexbox, CSS grid, CSS custom properties are all safe.
+  All localStorage access is wrapped in try/catch (throws in private browsing).
+  No external requests: system fonts + inline SVG only.
+  No failure states, no scores, no streaks, no sound. Ever.
+
+  LOOK: warm cream ground, the step lifted onto a soft card, one filled pill
+  as the obvious tap. ?theme=sand|sage|blue|lilac previews a theme without
+  persisting it.
+  ==========================================================================
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Morning</title>
+<meta name="theme-color" content="#e9dfd1">
+<style>
+  .t-sand  { --bg:#e9dfd1; --surface:#f6f1e8; --ink:#4a4034; --soft:#8a7e6c; --line:#d8cbb8; --accent:#a9805f; --accent-soft:#e0cdba; }
+  .t-sage  { --bg:#dde4db; --surface:#eff3ec; --ink:#3b473c; --soft:#78876f; --line:#c8d3c4; --accent:#6f8d6c; --accent-soft:#c9d8c5; }
+  .t-blue  { --bg:#dbe3e9; --surface:#eef2f7; --ink:#35414a; --soft:#73858f; --line:#c4d0d9; --accent:#6c8ba2; --accent-soft:#c6d6e1; }
+  .t-lilac { --bg:#e4dfe9; --surface:#f2eef6; --ink:#413a4a; --soft:#7e7689; --line:#d1c9d9; --accent:#867aa0; --accent-soft:#d6cfe2; }
+
+  html, body { margin:0; padding:0; height:100%; width:100%; overflow:hidden; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "Helvetica Neue", Helvetica, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+    -webkit-touch-callout: none;
+  }
+  #app { position:fixed; top:0; left:0; right:0; bottom:0; display:flex; flex-direction:column; }
+  button, input { font-family: inherit; color: inherit; -webkit-appearance: none; appearance: none; border-radius:0; }
+  button { background: transparent; border: 0; padding: 0; cursor: pointer; }
+  svg { display:block; }
+
+  /* ---------- ambient time bar ---------- */
+  .ambient { height:58px; padding:22px 30px 0 30px; display:flex; flex-direction:row; align-items:center; box-sizing:border-box; }
+  .track { flex:1 1 auto; height:10px; border-radius:5px; background: var(--line); position:relative; overflow:hidden; }
+  .fill { position:absolute; top:0; right:0; bottom:0; width:100%; border-radius:5px;
+          background: var(--accent-soft); transition: width 280ms linear; }
+  .door { width:34px; margin-left:16px; color: var(--soft); flex:0 0 auto; }
+
+  /* ---------- stage ---------- */
+  .stage { flex:1 1 auto; position:relative; opacity:1; transition: opacity 240ms ease; }
+  .pane { position:absolute; top:0; left:0; right:0; bottom:0; display:flex; flex-direction:column;
+          align-items:center; justify-content:center; }
+  .card { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+
+  /* step illustration: pastel medallion + two-tone line art */
+  .medallion { flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+               background: var(--tint); }
+  .art { color: var(--soft); }
+
+  .steplabel { flex:0 0 auto; font-weight:600; letter-spacing:-0.4px; text-align:center; }
+  .done { flex:0 0 auto; font-weight:600; letter-spacing:0.2px;
+          display:flex; align-items:center; justify-content:center;
+          transition: opacity 180ms ease, transform 180ms ease; }
+  .done:active { opacity:.72; transform: scale(.985); }
+  .park { flex:0 0 auto; min-width:340px; height:88px; padding:0 34px; margin-top:16px; border-radius:44px;
+          color: var(--soft); font-size:26px; box-shadow: inset 0 0 0 2px var(--line);
+          display:flex; align-items:center; justify-content:center; }
+  .park:active { opacity:.6; }
+  .next { flex:0 0 auto; color: var(--soft); font-size:25px; margin-top:18px; height:30px; }
+
+  /* ---------- dots + chrome ---------- */
+  .footer { height:104px; position:relative; display:flex; flex-direction:row; align-items:center; justify-content:center; }
+  .dot { width:18px; height:18px; border-radius:9px; margin:0 11px; box-shadow: inset 0 0 0 2px var(--line); }
+  .dot.on { background: var(--accent); box-shadow:none; }
+  .dot.here { box-shadow: inset 0 0 0 2px var(--soft); }
+  .seeall { position:absolute; right:16px; top:8px; width:150px; height:88px; border-radius:44px;
+            color: var(--soft); font-size:24px; display:flex; align-items:center; justify-content:center; }
+  .seeall:active { opacity:.6; }
+  .corner { position:absolute; left:0; bottom:0; width:110px; height:110px; }
+
+  /* ---------- overview / reorder ---------- */
+  .sheet { position:fixed; top:0; left:0; right:0; bottom:0; background: var(--bg);
+           display:flex; flex-direction:column; padding:24px 34px; box-sizing:border-box; }
+  .sheettitle { flex:0 0 auto; font-size:34px; font-weight:600; margin:0 0 14px 0; }
+  .rows { flex:1 1 auto; }
+  .row { height:88px; margin-bottom:4px; border-radius:24px; background: var(--surface);
+         display:grid; grid-template-columns: 76px 1fr 88px 88px; grid-gap:8px; align-items:center;
+         padding:0 18px 0 14px; box-sizing:border-box; }
+  .rowart { width:60px; height:60px; border-radius:30px; background: var(--tint);
+            display:flex; align-items:center; justify-content:center; }
+  .rowart .art { width:44px; height:44px; }
+  .row .rl { font-size:31px; }
+  .row.isdone .rl { color: var(--soft); }
+  .arrow { width:88px; height:88px; color: var(--soft); display:flex; align-items:center; justify-content:center; }
+  .arrow:active { opacity:.5; }
+  .arrow[disabled] { opacity:.22; }
+  .tick { color: var(--accent); }
+  .sheetfoot { flex:0 0 auto; display:flex; flex-direction:row; align-items:center; justify-content:space-between; margin-top:12px; }
+  .themes { display:flex; flex-direction:row; }
+  .sw { width:88px; height:88px; border-radius:44px; margin-right:12px; display:flex; align-items:center; justify-content:center; }
+  .sw i { display:block; width:52px; height:52px; border-radius:26px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.09); }
+  .sw.sel { box-shadow: inset 0 0 0 3px var(--soft); }
+  .big { height:88px; padding:0 42px; border-radius:44px; background: var(--surface);
+         box-shadow: inset 0 0 0 2px var(--line); font-size:28px;
+         display:flex; align-items:center; justify-content:center; }
+  .big:active { opacity:.7; }
+
+  /* ---------- parent settings ---------- */
+  .pgrid { flex:1 1 auto; display:grid; grid-template-columns:1fr 1fr; grid-gap:14px 34px; align-content:start; }
+  .field { display:flex; flex-direction:row; align-items:center; justify-content:space-between; }
+  .field span { font-size:22px; color: var(--soft); flex:0 0 auto; margin-right:14px; }
+  .field input[type=text], .field input[type=time] {
+    flex:1 1 auto; min-width:0; height:56px; padding:0 16px; box-sizing:border-box; font-size:24px;
+    background: var(--surface); border:0; box-shadow: inset 0 0 0 2px var(--line); border-radius:14px;
+    -webkit-user-select:text; user-select:text;
+  }
+  .toggle { width:104px; height:56px; border-radius:28px; background: var(--line); position:relative; flex:0 0 auto; }
+  .toggle b { position:absolute; top:6px; left:6px; width:44px; height:44px; border-radius:22px;
+              background: var(--surface); transition: left 200ms ease; }
+  .toggle.on { background: var(--accent); }
+  .toggle.on b { left:54px; }
+  .pnote { flex:0 0 auto; font-size:19px; color: var(--soft); margin-top:12px; line-height:1.5; }
+
+  /* ================= warm, elevated ================= */
+  body.t-sand { --bg:#f0e8dd; }
+  body.t-sage  { --bg:#e7ece3; }
+  body.t-blue  { --bg:#e6ecf1; }
+  body.t-lilac { --bg:#ebe6f0; }
+  .card {
+    background: var(--surface); border-radius:44px; padding:26px 70px 30px 70px;
+    box-shadow: 0 14px 34px rgba(60,48,36,.09), 0 2px 4px rgba(60,48,36,.05);
+  }
+  .medallion { width:176px; height:176px; border-radius:88px; box-shadow:none; }
+  .medallion .art { width:132px; height:132px; }
+  .steplabel { font-size:46px; margin:16px 0 14px 0; }
+  .done {
+    width:430px; height:132px; border-radius:66px; background: var(--accent);
+    color: var(--surface); box-shadow: 0 8px 18px rgba(60,48,36,.16); font-size:38px;
+  }
+  .park { box-shadow:none; background: transparent; }
+  .row { box-shadow: 0 6px 16px rgba(60,48,36,.07); margin-bottom:6px; height:86px; }
+  .big { box-shadow: 0 6px 16px rgba(60,48,36,.09); }
+  .track { background: rgba(0,0,0,.07); }
+
+  .fadein { animation: fi 240ms ease both; }
+  @keyframes fi { from { opacity:0 } to { opacity:1 } }
+  .celebrate { position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center;
+               justify-content:center; color: var(--accent); opacity:0; transition: opacity 200ms ease; }
+  .celebrate.show { opacity:1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stage, .fill, .done, .park, .toggle b, .celebrate { transition-duration: 0ms !important; }
+    .fadein { animation-duration: 0ms; }
+  }
+</style>
+</head>
+<body class="t-sand">
+<div id="app"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------------------------------------------------------------- config */
+  var STORE_KEY = 'morning.routine.v1';
+  var ACTIVE_PROFILE = 'her';          // adding a second profile = data change only
+  var WINDOW_MIN = 45;                 // how long before leave time the bar starts depleting
+  var BUFFER_MIN = 5;                  // invisible buffer: target is 5 min earlier than entered
+  var THEMES = [
+    { id: 'sand',  swatch: '#d8c3aa' },
+    { id: 'sage',  swatch: '#a9c0a3' },
+    { id: 'blue',  swatch: '#a5bccd' },
+    { id: 'lilac', swatch: '#bfb2d2' }
+  ];
+  // Each step carries its own soft pastel, so the screens are told apart by colour as well as art.
+  var STEPS = [
+    { id: 'breakfast', label: 'Breakfast',   tint: '#e6d3b9' },
+    { id: 'teeth',     label: 'Brush teeth', tint: '#cbdae2' },
+    { id: 'hair',      label: 'Brush hair',  tint: '#dcd2e5' },
+    { id: 'dressed',   label: 'Get dressed', tint: '#d2e0cf' },
+    { id: 'socks',     label: 'Socks on',    tint: '#eed8cb' },
+    { id: 'shoes',     label: 'Shoes on',    tint: '#dcd8ce' }
+  ];
+
+  var reduced = false;
+  try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  var FADE = reduced ? 0 : 240;
+
+  function param(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  var themeOverride = param('theme');  // preview only, never persisted
+
+  /* ------------------------------------------------------------------ art */
+  /* Two-tone line art: a soft silhouette (fill) plus line detail (stroke).
+     Geometric only — no faces, no cartoons. */
+  var SHADE = 'rgba(0,0,0,.13)';
+  var FAINT = 'rgba(0,0,0,.06)';
+  var ART = {
+    /* cereal bowl with a spoon standing in it */
+    breakfast:
+      '<path d="M24 100h152c0 42-34 66-76 66s-76-24-76-66z" fill="' + SHADE + '"/>' +
+      '<path d="M16 100h168" stroke="currentColor" stroke-width="9"/>' +
+      '<path d="M126 96l40-42" stroke="currentColor" stroke-width="9"/>' +
+      '<ellipse cx="172" cy="44" rx="12" ry="17" transform="rotate(40 172 44)" stroke="currentColor" stroke-width="8"/>' +
+      '<path d="M100 168v10" stroke="currentColor" stroke-width="9"/>',
+    /* toothbrush, bristles up, dab of paste */
+    teeth:
+      '<g transform="rotate(-12 100 100)">' +
+        '<path d="M100 182v-62" stroke="currentColor" stroke-width="18" stroke-linecap="round"/>' +
+        '<rect x="78" y="64" width="44" height="58" rx="20" fill="' + SHADE + '"/>' +
+        '<rect x="78" y="64" width="44" height="58" rx="20" stroke="currentColor" stroke-width="9"/>' +
+        '<rect x="73" y="38" width="54" height="28" rx="8" fill="' + FAINT + '"/>' +
+        '<rect x="73" y="38" width="54" height="28" rx="8" stroke="currentColor" stroke-width="8"/>' +
+        '<path d="M87 44v16M100 42v18M113 44v16" stroke="currentColor" stroke-width="5"/>' +
+      '</g>',
+    /* paddle hairbrush, bristle dots */
+    hair:
+      '<g transform="rotate(24 100 100)">' +
+        '<path d="M100 116v72" stroke="currentColor" stroke-width="19" stroke-linecap="round"/>' +
+        '<ellipse cx="100" cy="68" rx="38" ry="54" fill="' + SHADE + '"/>' +
+        '<ellipse cx="100" cy="68" rx="38" ry="54" stroke="currentColor" stroke-width="9"/>' +
+        '<g fill="currentColor">' +
+          '<circle cx="86" cy="40" r="6"/><circle cx="112" cy="40" r="6"/>' +
+          '<circle cx="76" cy="66" r="6"/><circle cx="100" cy="60" r="6"/><circle cx="124" cy="66" r="6"/>' +
+          '<circle cx="86" cy="92" r="6"/><circle cx="112" cy="92" r="6"/>' +
+        '</g>' +
+      '</g>',
+    /* t-shirt and trousers */
+    dressed:
+      '<path d="M44 30h42l30 17-12 25-15-7v55H41V65l-15 7-12-25z" fill="' + SHADE + '"/>' +
+      '<path d="M44 30h42l30 17-12 25-15-7v55H41V65l-15 7-12-25z" stroke="currentColor" stroke-width="8"/>' +
+      '<path d="M44 30c8 15 34 15 42 0" stroke="currentColor" stroke-width="8"/>' +
+      '<path d="M104 108h66l-8 78h-22l-3-46-3 46h-22z" fill="' + SHADE + '"/>' +
+      '<path d="M104 108h66l-8 78h-22l-3-46-3 46h-22z" stroke="currentColor" stroke-width="8"/>' +
+      '<path d="M105 126h64" stroke="currentColor" stroke-width="8"/>',
+    /* a pair of socks: ribbed cuff, toe seam */
+    socks:
+      '<g transform="translate(-34 26)">' +
+        '<path d="M104 44h50v62a38 38 0 0 1-38 38H70a24 24 0 0 1 0-48h8a26 26 0 0 0 26-26z" fill="' + FAINT + '"/>' +
+        '<rect x="102" y="22" width="54" height="26" rx="7" fill="' + FAINT + '"/>' +
+      '</g>' +
+      '<path d="M104 44h50v62a38 38 0 0 1-38 38H70a24 24 0 0 1 0-48h8a26 26 0 0 0 26-26z" fill="' + SHADE + '"/>' +
+      '<path d="M104 44h50v62a38 38 0 0 1-38 38H70a24 24 0 0 1 0-48h8a26 26 0 0 0 26-26z" stroke="currentColor" stroke-width="8"/>' +
+      '<rect x="102" y="18" width="54" height="28" rx="7" fill="' + SHADE + '"/>' +
+      '<rect x="102" y="18" width="54" height="28" rx="7" stroke="currentColor" stroke-width="8"/>' +
+      '<path d="M116 24v16M129 24v16M142 24v16" stroke="currentColor" stroke-width="6"/>',
+    /* laced shoe, side on */
+    shoes:
+      '<path d="M26 140V92a14 14 0 0 1 14-14h26l38-42h20c2 38 22 60 50 72l12 5c14 6 14 27-2 27z" fill="' + SHADE + '"/>' +
+      '<path d="M26 140V92a14 14 0 0 1 14-14h26l38-42h20c2 38 22 60 50 72l12 5c14 6 14 27-2 27z" stroke="currentColor" stroke-width="8"/>' +
+      '<path d="M20 140h130c20 0 30-6 36-16" stroke="currentColor" stroke-width="10"/>' +
+      '<path d="M74 78l26 18M100 78l-26 18M104 54l26 18M130 54l-26 18" stroke="currentColor" stroke-width="7"/>' +
+      '<path d="M66 78l38-42" stroke="currentColor" stroke-width="8"/>',
+    door:
+      '<path d="M46 12H14a2 2 0 0 0-2 2v40a2 2 0 0 0 2 2h32" stroke="currentColor" stroke-width="4" fill="none"/>' +
+      '<path d="M46 8v52" stroke="currentColor" stroke-width="4"/>' +
+      '<circle cx="24" cy="34" r="2.6" stroke="currentColor" stroke-width="3" fill="none"/>',
+    check: '<path d="M40 106l40 40 82-92" stroke="currentColor" stroke-width="12" fill="none"/>',
+    up:    '<path d="M32 40L20 28 8 40" stroke="currentColor" stroke-width="4" fill="none"/>',
+    down:  '<path d="M8 16l12 12 12-12" stroke="currentColor" stroke-width="4" fill="none"/>'
+  };
+
+  var FIT = { breakfast: 0.87, teeth: 0.96, hair: 0.80, dressed: 0.97, socks: 0.98, shoes: 0.88 };
+
+  function art(name, size) {
+    var vb = (name === 'door') ? '0 0 60 68' : (name === 'up' || name === 'down') ? '0 0 40 56' : '0 0 200 200';
+    var s = size ? ' width="' + size + '" height="' + size + '"' : ' width="200" height="200"';
+    var body = FIT[name]
+      ? '<g transform="translate(100,100) scale(' + FIT[name] + ') translate(-100,-100)">' + ART[name] + '</g>'
+      : ART[name];
+    return '<svg class="art"' + s + ' viewBox="' + vb + '" fill="none" ' +
+      'stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>';
+  }
+
+  /* ------------------------------------------------------------------ state */
+  var data = null;
+
+  function readStore() {
+    try {
+      var raw = window.localStorage.getItem(STORE_KEY);
+      if (raw) { return JSON.parse(raw); }
+    } catch (e) {}
+    return null;
+  }
+  function writeStore() {
+    try { window.localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) {}
+  }
+  function defaultProfile() {
+    return {
+      order: STEPS.map(function (s) { return s.id; }),
+      theme: 'sand',
+      leaveTime: '08:20',
+      celebrate: true,
+      labels: {},
+      day: null
+    };
+  }
+  function profile() { return data.profiles[ACTIVE_PROFILE]; }
+
+  function dateKey() {
+    var d = new Date();
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
+  }
+
+  function boot() {
+    var stored = readStore();
+    if (!stored || !stored.profiles || !stored.profiles[ACTIVE_PROFILE]) {
+      data = { profiles: {} };
+      data.profiles[ACTIVE_PROFILE] = defaultProfile();
+    } else {
+      data = stored;
+      var p = data.profiles[ACTIVE_PROFILE];
+      var d = defaultProfile();
+      for (var k in d) {
+        if (k !== 'day' && (typeof p[k] === 'undefined' || p[k] === null)) { p[k] = d[k]; }
+      }
+    }
+    newDayIfNeeded();
+  }
+
+  // Daily reset: yesterday is never shown or referenced.
+  function newDayIfNeeded() {
+    var p = profile();
+    if (!p.day || p.day.date !== dateKey()) {
+      p.day = { date: dateKey(), queue: p.order.slice(), completed: [] };
+      writeStore();
+    }
+  }
+
+  function stepDef(id) {
+    for (var i = 0; i < STEPS.length; i++) { if (STEPS[i].id === id) return STEPS[i]; }
+    return STEPS[0];
+  }
+  function labelOf(id) {
+    var p = profile();
+    return (p.labels && p.labels[id]) ? p.labels[id] : stepDef(id).label;
+  }
+  function isDone(id) { return profile().day.completed.indexOf(id) !== -1; }
+  function pending() {
+    return profile().day.queue.filter(function (id) { return !isDone(id); });
+  }
+  function currentId() { var q = pending(); return q.length ? q[0] : null; }
+  function nextId() { var q = pending(); return q.length > 1 ? q[1] : null; }
+
+  function complete(id) {
+    var p = profile();
+    if (!isDone(id)) { p.day.completed.push(id); }
+    writeStore();
+  }
+  // Park: move to the end of the queue. No flag, no marker — it comes back looking new.
+  function park(id) {
+    var p = profile();
+    var q = p.day.queue.filter(function (x) { return x !== id; });
+    q.push(id);
+    p.day.queue = q;
+    writeStore();
+  }
+
+  /* ------------------------------------------------------------ ambient bar */
+  function remainingFraction() {
+    var p = profile();
+    var parts = (p.leaveTime || '08:20').split(':');
+    var target = (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10) - BUFFER_MIN;
+    var now = new Date();
+    var mins = now.getHours() * 60 + now.getMinutes() + (now.getSeconds() / 60);
+    var left = target - mins;
+    if (left <= 0) return 1;            // target passed: bar sits full and calm. Nothing happens.
+    if (left >= WINDOW_MIN) return 1;
+    return left / WINDOW_MIN;
+  }
+
+  /* ----------------------------------------------------------------- render */
+  var view = 'step';                    // 'step' | 'all' | 'parent'
+  var app = document.getElementById('app');
+
+  function ambientHTML() {
+    var f = Math.round(remainingFraction() * 1000) / 10;
+    return '<div class="ambient">' +
+      '<div class="track"><div class="fill" id="fill" style="width:' + f + '%"></div></div>' +
+      '<div class="door">' + art('door', 34) + '</div>' +
+    '</div>';
+  }
+
+  function dotsHTML() {
+    var p = profile(), out = '', cur = currentId();
+    for (var i = 0; i < p.day.queue.length; i++) {
+      var id = p.day.queue[i];
+      var cls = 'dot' + (isDone(id) ? ' on' : (id === cur ? ' here' : ''));
+      out += '<div class="' + cls + '"></div>';
+    }
+    return '<div class="footer">' + out +
+      '<button class="seeall" data-act="all">See all</button>' +
+      '<div class="corner" id="corner"></div></div>';
+  }
+
+  function medallion(id) {
+    return '<div class="medallion" style="--tint:' + stepDef(id).tint + '">' + art(id) + '</div>';
+  }
+
+  function stepPaneHTML() {
+    var id = currentId();
+    if (!id) {
+      return '<div class="pane fadein"><div class="card">' +
+        '<div class="medallion" style="--tint:var(--accent-soft)">' + art('door', 96) + '</div>' +
+        '<div class="steplabel">All done</div>' +
+      '</div><div class="next">Have a good day.</div></div>';
+    }
+    return '<div class="pane fadein">' +
+      '<div class="card">' + medallion(id) +
+        '<div class="steplabel">' + labelOf(id) + '</div>' +
+        '<button class="done" data-act="done">Done</button>' +
+      '</div>' +
+      '<button class="park" data-act="park">Come back to this</button>' +
+      '<div class="next">' + (nextId() ? 'Next: ' + labelOf(nextId()) : '') + '</div>' +
+    '</div>';
+  }
+
+  function allHTML() {
+    var p = profile(), rows = '';
+    for (var i = 0; i < p.day.queue.length; i++) {
+      var id = p.day.queue[i], done = isDone(id);
+      rows += '<div class="row' + (done ? ' isdone' : '') + '">' +
+        '<div class="rowart" style="--tint:' + stepDef(id).tint + '">' +
+          (done ? '<span class="tick">' + art('check', 40) + '</span>' : art(id, 44)) + '</div>' +
+        '<div class="rl">' + labelOf(id) + '</div>' +
+        '<button class="arrow" data-act="up" data-i="' + i + '"' + (i === 0 ? ' disabled' : '') + '>' + art('up', 40) + '</button>' +
+        '<button class="arrow" data-act="down" data-i="' + i + '"' + (i === p.day.queue.length - 1 ? ' disabled' : '') + '>' + art('down', 40) + '</button>' +
+      '</div>';
+    }
+    var sw = '';
+    for (var t = 0; t < THEMES.length; t++) {
+      sw += '<button class="sw' + (p.theme === THEMES[t].id ? ' sel' : '') + '" data-act="theme" data-id="' +
+            THEMES[t].id + '"><i style="background:' + THEMES[t].swatch + '"></i></button>';
+    }
+    return '<div class="sheet fadein">' +
+      '<h1 class="sheettitle">Your morning</h1>' +
+      '<div class="rows">' + rows + '</div>' +
+      '<div class="sheetfoot"><div class="themes">' + sw + '</div>' +
+      '<button class="big" data-act="back">Back</button></div>' +
+    '</div>';
+  }
+
+  function parentHTML() {
+    var p = profile(), fields = '';
+    for (var i = 0; i < STEPS.length; i++) {
+      fields += '<div class="field"><span>' + (i + 1) + '</span>' +
+        '<input type="text" data-label-for="' + STEPS[i].id + '" value="' +
+        labelOf(STEPS[i].id).replace(/"/g, '&quot;') + '"></div>';
+    }
+    return '<div class="sheet fadein">' +
+      '<h1 class="sheettitle">Parent settings</h1>' +
+      '<div class="pgrid">' +
+        '<div class="field"><span>Leave time</span><input type="time" id="leave" value="' + p.leaveTime + '"></div>' +
+        '<div class="field"><span>Gentle completion feedback</span>' +
+          '<button class="toggle' + (p.celebrate ? ' on' : '') + '" data-act="celeb"><b></b></button></div>' +
+        fields +
+      '</div>' +
+      '<div class="pnote">Target is treated as ' + BUFFER_MIN + ' minutes earlier than entered, as invisible buffer. ' +
+        'The top bar depletes over the final ' + WINDOW_MIN + ' minutes and never changes colour. ' +
+        'Nothing on her screen counts, scores or reminds.</div>' +
+      '<div class="sheetfoot">' +
+        '<button class="big" data-act="resetday">Reset today</button>' +
+        '<button class="big" data-act="back">Done</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function render() {
+    var p = profile();
+    document.body.className = 't-' + (themeOverride || p.theme);
+    if (view === 'all') { app.innerHTML = allHTML(); return; }
+    if (view === 'parent') { app.innerHTML = parentHTML(); return; }
+    app.innerHTML = ambientHTML() + '<div class="stage" id="stage">' + stepPaneHTML() + '</div>' + dotsHTML();
+    bindCorner();
+  }
+
+  function advance(mutate) {
+    var stage = document.getElementById('stage');
+    if (!stage || FADE === 0) { mutate(); render(); return; }
+    stage.style.opacity = '0';
+    window.setTimeout(function () { mutate(); render(); }, FADE);
+  }
+
+  function completeAndAdvance(id) {
+    var stage = document.getElementById('stage');
+    if (profile().celebrate && stage && FADE > 0) {
+      var c = document.createElement('div');
+      c.className = 'celebrate';
+      c.innerHTML = art('check', 150);
+      stage.appendChild(c);
+      window.setTimeout(function () { c.className = 'celebrate show'; }, 20);
+      window.setTimeout(function () { advance(function () { complete(id); }); }, 300);
+    } else {
+      advance(function () { complete(id); });
+    }
+  }
+
+  /* ------------------------------------------------------------ interaction */
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest ? e.target.closest('[data-act]') : null;
+    if (!el) return;
+    var act = el.getAttribute('data-act');
+    var p = profile();
+
+    if (act === 'done') { completeAndAdvance(currentId()); return; }
+    if (act === 'park') { var id = currentId(); advance(function () { park(id); }); return; }
+    if (act === 'all') { view = 'all'; render(); return; }
+    if (act === 'back') { saveParentFields(); view = 'step'; render(); return; }
+    if (act === 'theme') { p.theme = el.getAttribute('data-id'); themeOverride = null; writeStore(); render(); return; }
+    if (act === 'celeb') { p.celebrate = !p.celebrate; writeStore(); render(); return; }
+    if (act === 'resetday') {
+      p.day = { date: dateKey(), queue: p.order.slice(), completed: [] };
+      writeStore(); view = 'step'; render(); return;
+    }
+    if (act === 'up' || act === 'down') {
+      var i = parseInt(el.getAttribute('data-i'), 10);
+      var j = act === 'up' ? i - 1 : i + 1;
+      var q = p.day.queue;
+      if (j < 0 || j >= q.length) return;
+      var tmp = q[i]; q[i] = q[j]; q[j] = tmp;
+      p.order = q.slice();                 // preferred order for tomorrow
+      writeStore(); render();
+    }
+  }, false);
+
+  function saveParentFields() {
+    if (view !== 'parent') return;
+    var p = profile();
+    var t = document.getElementById('leave');
+    if (t && t.value) { p.leaveTime = t.value; }
+    var inputs = document.querySelectorAll('[data-label-for]');
+    for (var i = 0; i < inputs.length; i++) {
+      var id = inputs[i].getAttribute('data-label-for');
+      var v = inputs[i].value.trim();
+      if (v) { p.labels[id] = v; } else { delete p.labels[id]; }
+    }
+    writeStore();
+  }
+
+  // Parent settings: 3-second long-press in the bottom-left corner. No visible button.
+  function bindCorner() {
+    var c = document.getElementById('corner');
+    if (!c) return;
+    var timer = null;
+    var start = function () {
+      clear();
+      timer = window.setTimeout(function () { view = 'parent'; render(); }, 3000);
+    };
+    var clear = function () { if (timer) { window.clearTimeout(timer); timer = null; } };
+    c.addEventListener('touchstart', start, false);
+    c.addEventListener('touchend', clear, false);
+    c.addEventListener('touchcancel', clear, false);
+    c.addEventListener('touchmove', clear, false);
+    c.addEventListener('mousedown', start, false);
+    c.addEventListener('mouseup', clear, false);
+    c.addEventListener('mouseleave', clear, false);
+  }
+
+  // Appliance feel: no rubber-band scrolling, no pinch zoom.
+  document.addEventListener('touchmove', function (e) {
+    var t = e.target;
+    var editable = t && t.closest ? t.closest('input') : null;
+    if (!editable) { e.preventDefault(); }
+  }, { passive: false });
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, false);
+
+  /* -------------------------------------------------------------- lifecycle */
+  boot();
+  render();
+
+  window.setInterval(function () {
+    var f = document.getElementById('fill');
+    if (f) { f.style.width = (Math.round(remainingFraction() * 1000) / 10) + '%'; }
+  }, 15000);
+
+  // Left on the counter overnight: pick up the new day on wake, silently.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) {
+      var before = profile().day.date;
+      newDayIfNeeded();
+      if (profile().day.date !== before) { view = 'step'; }
+      render();
+    }
+  }, false);
+})();
+</script>
+</body>
+</html>

@@ -142,8 +142,6 @@
   .todash:active { opacity:.85; }
   .dash { position:fixed; top:0; left:0; right:0; bottom:0; background: var(--bg);
           display:flex; flex-direction:column; padding:22px 30px 18px 30px; box-sizing:border-box; }
-  .dverdict { flex:0 0 auto; font-size:36px; font-weight:600; letter-spacing:-0.6px; line-height:1.2;
-              margin:0 0 18px 0; text-wrap:pretty; }
   .dbody { flex:1 1 auto; display:grid; grid-template-columns: 1.5fr 1fr; grid-gap:18px; min-height:0; }
   .panel { background: var(--surface); border-radius:26px; padding:22px 24px 18px 24px; box-sizing:border-box;
            box-shadow: 0 6px 16px rgba(60,48,36,.07); display:flex; flex-direction:column; min-height:0; }
@@ -157,6 +155,16 @@
   .tbody .trow:last-child { border-bottom:0; }
   .tstd { font-size:36px; font-weight:600; letter-spacing:-0.5px; font-variant-numeric: tabular-nums; }
   .tdest { font-size:20px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tdest.other { color: var(--soft); }
+  .tdest.lon { font-weight:600; }
+  .tnote { flex:0 0 auto; font-size:18px; color: var(--soft); line-height:1.35; padding-bottom:10px; }
+  .tbody.dense { overflow:hidden; }
+  .tbody.dense .trow { height:40px; }
+  .tbody.dense .tstd { font-size:26px; }
+  .tbody.dense .tdest { font-size:18px; }
+  .tbody.dense .tplat { font-size:19px; }
+  .tbody.dense .tstat { font-size:18px; }
+  .tbody.dense .tstat .exp { font-size:21px; }
   .tplat { font-size:24px; color: var(--soft); font-variant-numeric: tabular-nums; }
   .tstat { font-size:21px; }
   .tstat .quiet { color: var(--soft); }
@@ -185,12 +193,6 @@
   .dback { height:44px; padding:0 22px; border-radius:22px; color: var(--ink); font-size:21px;
            box-shadow: inset 0 0 0 1px var(--line); display:flex; align-items:center; }
   .dback:active { opacity:.6; }
-  .dstates { display:flex; flex-direction:row; align-items:center; opacity:.55; }
-  .dstates em { font-style:normal; font-size:15px; color: var(--soft); letter-spacing:1px;
-                text-transform:uppercase; margin-right:12px; }
-  .dstate { height:34px; padding:0 14px; margin-left:6px; border-radius:17px; font-size:16px;
-            color: var(--soft); box-shadow: inset 0 0 0 1px var(--line); display:flex; align-items:center; }
-  .dstate.sel { color: var(--surface); background: var(--soft); box-shadow:none; }
 
   /* ================= warm, elevated ================= */
   body.t-sand { --bg:#f0e8dd; }
@@ -263,6 +265,9 @@
   var TRAIN_FEED_URL = 'https://withered-queen-a95c.rossborkett.workers.dev/';
   var TRAIN_CACHE_KEY = 'morning.trains.v1';
   var TRAIN_POLL_MS = 60000;                 // refresh cadence while the dashboard is open
+  var WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
+  var WEATHER_CACHE_KEY = 'morning.weather.v1';
+  var WEATHER_POLL_MS = 900000;              // 15 min — forecasts don't move faster
   var LOCATIONS = [
     { key: 'leigh',  name: 'Leigh-on-Sea', lat: 51.5424, lon:  0.6543 },
     { key: 'london', name: 'London',       lat: 51.5074, lon: -0.1278 }
@@ -391,14 +396,26 @@
   }
 
   // The Worker may hand back the board bare or wrapped; accept the usual shapes.
+  // A valid board with no trainServices (late evening, engineering works) is a
+  // SUCCESS with an empty list — not a feed failure.
   function boardFrom(json) {
     if (!json || typeof json !== 'object') return null;
-    if (json.trainServices) return json;
-    if (json.data && json.data.trainServices) return json.data;
-    if (json.GetStationBoardResult && json.GetStationBoardResult.trainServices) {
-      return json.GetStationBoardResult;
+    var b = null;
+    if (json.trainServices || json.crs || json.locationName || json.generatedAt) { b = json; }
+    else if (json.data && (json.data.trainServices || json.data.crs)) { b = json.data; }
+    else if (json.GetStationBoardResult) { b = json.GetStationBoardResult; }
+    if (!b) return null;
+    if (!b.trainServices || !b.trainServices.length) { b.trainServices = []; }
+    return b;
+  }
+
+  // generatedAt is an ISO timestamp from LDBWS; fall back to when we fetched.
+  function boardTime(board, fetchedAt) {
+    if (board && typeof board.generatedAt === 'string') {
+      var m = /T(\d{2}:\d{2})/.exec(board.generatedAt);
+      if (m) return m[1];
     }
-    return null;
+    return hhmm(fetchedAt);
   }
 
   function fetchTrains() {
@@ -447,61 +464,97 @@
     }, TRAIN_POLL_MS);
   }
 
-  /* Stubs remain, driving the preview-state switcher only. */
-  function trainStub() {
-    return {
-      generatedAt: '07:14',
-      trainServices: [
-        { std: '07:42', etd: 'On time', platform: '2',
-          destination: [{ locationName: DEST_NAME }], operator: OPERATOR, isCancelled: false },
-        { std: '07:48', etd: 'On time', platform: '1',
-          destination: [{ locationName: DEST_NAME }], operator: OPERATOR, isCancelled: false },
-        { std: '07:56', etd: '08:07', platform: '3',
-          destination: [{ locationName: DEST_NAME }], operator: OPERATOR, isCancelled: false },
-        { std: '08:02', etd: 'Delayed', platform: null,
-          destination: [{ locationName: DEST_NAME }], operator: OPERATOR, isCancelled: false },
-        { std: '08:11', etd: 'Cancelled', platform: '2',
-          destination: [{ locationName: DEST_NAME }], operator: OPERATOR, isCancelled: true }
-      ]
-    };
+  /* ----------------------------------------------------------- weather feed
+     Open-Meteo, no key, CORS-friendly, so called straight from the page. One
+     request per location; each caches independently so a single failure only
+     costs that column. */
+  var wxLive = {};                            // key -> { data, fetchedAt, failed, loading }
+  function wxSlot(key) {
+    if (!wxLive[key]) { wxLive[key] = { data: null, fetchedAt: null, failed: false, loading: false }; }
+    return wxLive[key];
   }
-  function hoursFrom(start, probs) {
-    var t = [], i, h;
-    for (i = 0; i < probs.length; i++) {
-      h = start + i;
-      t.push('2026-08-16T' + (h < 10 ? '0' + h : h) + ':00');
-    }
-    return { time: t, precipitation_probability: probs };
+  function weatherUrl(loc) {
+    return WEATHER_URL +
+      '?latitude=' + loc.lat + '&longitude=' + loc.lon +
+      '&current=temperature_2m,weather_code' +
+      '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&hourly=precipitation_probability' +
+      '&timezone=Europe%2FLondon&forecast_days=1';
   }
-  function weatherStub(key) {
-    if (key === 'leigh') {
-      return {
-        current: { temperature_2m: 14.2, weather_code: 3 },
-        daily: { temperature_2m_max: [17.1], temperature_2m_min: [9.4], precipitation_probability_max: [70] },
-        hourly: hoursFrom(7, [5, 5, 10, 10, 15, 20, 30, 55, 70, 65, 40, 20, 10])
-      };
+  function readWeatherCache() {
+    try {
+      var raw = window.localStorage.getItem(WEATHER_CACHE_KEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      if (o && typeof o === 'object') return o;
+    } catch (e) {}
+    return null;
+  }
+  function writeWeatherCache() {
+    var out = {}, k;
+    for (k in wxLive) {
+      if (wxLive.hasOwnProperty(k) && wxLive[k].data) {
+        out[k] = { data: wxLive[k].data, fetchedAt: wxLive[k].fetchedAt };
+      }
     }
-    return {
-      current: { temperature_2m: 15.6, weather_code: 2 },
-      daily: { temperature_2m_max: [18.4], temperature_2m_min: [11.0], precipitation_probability_max: [20] },
-      hourly: hoursFrom(7, [0, 0, 5, 5, 10, 10, 15, 20, 20, 15, 10, 5, 0])
-    };
+    try { window.localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(out)); } catch (e) {}
+  }
+  // Accept only a payload we can actually read something out of.
+  function weatherFrom(json) {
+    if (!json || typeof json !== 'object') return null;
+    if (!json.current && !json.daily) return null;
+    return json;
   }
 
-  // 'live' = real feed. The rest force a preview of a failure state.
-  var dashState = 'live';
-  var DASH_STATES = [
-    { id: 'live',        label: 'Live' },
-    { id: 'stale',       label: 'Stale' },
-    { id: 'trainsdown',  label: 'Trains down' },
-    { id: 'weatherdown', label: 'Weather down' }
-  ];
+  function fetchWeather(loc) {
+    var slot = wxSlot(loc.key);
+    if (slot.loading) return;
+    slot.loading = true;
+    var req = new XMLHttpRequest();
+    var done = false;
+    function settle(payload) {
+      if (done) return;
+      done = true;
+      slot.loading = false;
+      if (payload) {
+        slot.data = payload;
+        slot.fetchedAt = (new Date()).getTime();
+        slot.failed = false;
+        writeWeatherCache();
+      } else {
+        slot.failed = true;                    // cached values, if any, still stand
+      }
+      if (view === 'dash') { render(); }
+    }
+    req.onreadystatechange = function () {
+      if (req.readyState !== 4) return;
+      var payload = null;
+      if (req.status >= 200 && req.status < 300) {
+        try { payload = weatherFrom(JSON.parse(req.responseText)); } catch (e) { payload = null; }
+      }
+      settle(payload);
+    };
+    req.onerror = function () { settle(null); };
+    req.ontimeout = function () { settle(null); };
+    try {
+      req.open('GET', weatherUrl(loc), true);
+      req.timeout = 12000;
+      req.send();
+    } catch (e) { settle(null); }
+  }
+
+  var wxPoll = null;
+  function startWeatherPolling() {
+    var i;
+    for (i = 0; i < LOCATIONS.length; i++) { fetchWeather(LOCATIONS[i]); }
+    if (wxPoll) return;
+    wxPoll = window.setInterval(function () {
+      if (view !== 'dash') return;
+      for (var j = 0; j < LOCATIONS.length; j++) { fetchWeather(LOCATIONS[j]); }
+    }, WEATHER_POLL_MS);
+  }
 
   function trainFeed() {
-    if (dashState === 'trainsdown') { return { ok: false, at: null, data: null }; }
-    if (dashState === 'stale') {
-      return { ok: true, at: '07:02', stale: true, data: trainStub() };
-    }
     if (!trainLive.data) {
       // Nothing cached and nothing fetched yet.
       return { ok: false, at: null, data: null, loading: trainLive.loading && !trainLive.failed };
@@ -509,15 +562,23 @@
     var age = ((new Date()).getTime() - trainLive.fetchedAt) / 60000;
     return {
       ok: true,
-      at: hhmm(trainLive.fetchedAt),
+      at: boardTime(trainLive.data, trainLive.fetchedAt),
       stale: trainLive.failed || age >= STALE_AFTER_MIN,
       data: trainLive.data
     };
   }
   function weatherFeed(key) {
-    if (dashState === 'weatherdown') { return { ok: false, at: null, data: null }; }
-    return { ok: true, at: dashState === 'stale' ? '07:02' : '07:14',
-             stale: dashState === 'stale', data: weatherStub(key) };
+    var slot = wxSlot(key);
+    if (!slot.data) {
+      return { ok: false, at: null, data: null, loading: slot.loading && !slot.failed };
+    }
+    var age = ((new Date()).getTime() - slot.fetchedAt) / 60000;
+    return {
+      ok: true,
+      at: hhmm(slot.fetchedAt),
+      stale: slot.failed || age >= STALE_AFTER_MIN,
+      data: slot.data
+    };
   }
 
   /* ------------------------------------------------------- guarded accessors */
@@ -549,18 +610,20 @@
     if (!w || !w.daily) return null;
     return num(arrAt(w.daily[field], 0));
   }
-  // First hour today at or above the rain threshold, as "HH:MM". Null if none.
+  // First hour from now at or above the rain threshold, as "HH:MM". Null if none.
+  // The live feed starts at 00:00, so hours already gone are skipped.
   function rainOnset(w) {
     if (!w || !w.hourly) return null;
     var t = w.hourly.time, p = w.hourly.precipitation_probability;
     if (!t || !p || !t.length) return null;
+    var nowH = (new Date()).getHours();
     for (var i = 0; i < t.length && i < p.length; i++) {
-      if (num(p[i]) !== null && p[i] >= RAIN_LIKELY_PCT) {
-        var s = str(t[i]);
-        if (!s) return null;
-        var m = /T(\d{2}:\d{2})/.exec(s);
-        return m ? m[1] : null;
-      }
+      var s = str(t[i]);
+      if (!s) continue;
+      var m = /T(\d{2}):(\d{2})/.exec(s);
+      if (!m) continue;
+      if (parseInt(m[1], 10) < nowH) continue;
+      if (num(p[i]) !== null && p[i] >= RAIN_LIKELY_PCT) { return m[1] + ':' + m[2]; }
     }
     return null;
   }
@@ -642,6 +705,17 @@
   function boot() {
     var cached = readTrainCache();      // board on screen immediately, refreshed after
     if (cached) { trainLive.data = boardFrom(cached.data); trainLive.fetchedAt = cached.fetchedAt; }
+    var wxc = readWeatherCache();
+    if (wxc) {
+      for (var k = 0; k < LOCATIONS.length; k++) {
+        var key = LOCATIONS[k].key, hit = wxc[key];
+        if (hit && hit.data && typeof hit.fetchedAt === 'number') {
+          var slot = wxSlot(key);
+          slot.data = weatherFrom(hit.data);
+          slot.fetchedAt = hit.fetchedAt;
+        }
+      }
+    }
     var stored = readStore();
     if (!stored || !stored.profiles || !stored.profiles[ACTIVE_PROFILE]) {
       data = { profiles: {} };
@@ -819,46 +893,36 @@
     return '<span class="quiet">' + (etd || 'On time') + '</span>';
   }
 
-  function nextDeparture(feed) {
+  // nrccMessages carry embedded markup; we want the sentence, not the styling.
+  function stripTags(s) {
+    if (typeof s !== 'string') return null;
+    var t = s.replace(/<[^>]*>/g, ' ')
+             .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+             .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+             .replace(/\s+/g, ' ');
+    t = t.replace(/^\s+/, '').replace(/\s+$/, '');
+    return t.length ? t : null;
+  }
+  function firstNrcc(feed) {
     if (!feed || !feed.ok || !feed.data) return null;
-    var svcs = feed.data.trainServices;
-    if (!svcs || !svcs.length) return null;
-    for (var i = 0; i < svcs.length; i++) {
-      var s = svcs[i];
-      if (!s || s.isCancelled === true || str(s.etd) === 'Cancelled') continue;
-      return isTimeLike(s.etd) ? str(s.etd) : str(s.std);
+    var msgs = feed.data.nrccMessages;
+    if (!msgs || !msgs.length) return null;
+    for (var i = 0; i < msgs.length; i++) {
+      var m = msgs[i];
+      if (!m) continue;
+      var txt = stripTags(typeof m === 'string' ? m : m.message);
+      if (txt) return txt;
     }
     return null;
   }
 
-  function verdictText(tFeed, wFeeds) {
-    var parts = [], wet = null, i, w, prob, onset;
-    for (i = 0; i < wFeeds.length; i++) {
-      w = wFeeds[i];
-      if (!w.feed.ok || !w.feed.data) continue;
-      prob = dailyVal(w.feed.data, 'precipitation_probability_max');
-      onset = rainOnset(w.feed.data);
-      if (prob !== null && prob >= RAIN_LIKELY_PCT && !wet) {
-        wet = { name: w.name, onset: onset };
-      }
-    }
-    var anyWeather = false;
-    for (i = 0; i < wFeeds.length; i++) { if (wFeeds[i].feed.ok) anyWeather = true; }
-
-    if (wet) {
-      parts.push('Coat and umbrella — rain' + (wet.onset ? ' from ' + wet.onset : '') + ' in ' + wet.name + '.');
-    } else if (anyWeather) {
-      parts.push('Mild, no rain.');
-    }
-    var next = nextDeparture(tFeed);
-    if (next) { parts.push('Next train ' + next + '.'); }
-    else if (!tFeed.ok) { parts.push('Train times unavailable — leave on the usual one.'); }
-    if (!parts.length) { return 'Nothing to report yet.'; }
-    return parts.join(' ');
+  function panelTitle(fallback) {
+    return '<div class="ptitle">' + ORIGIN_NAME +
+      (fallback ? ' · all departures' : ' → ' + DEST_NAME + ' · ' + OPERATOR) + '</div>';
   }
 
   function trainPanelHTML(feed) {
-    var head = '<div class="ptitle">' + ORIGIN_NAME + ' → ' + DEST_NAME + ' · ' + OPERATOR + '</div>';
+    var head = panelTitle(false);
     if (!feed.ok || !feed.data) {
       return '<div class="panel">' + head +
         '<div class="unavail">' + (feed.loading
@@ -867,35 +931,50 @@
         '</div>' +
       '</div>';
     }
-    var svcs = feed.data.trainServices || [];
+    var sel = selectServices(feed);
+    var svcs = sel.list;
+    var limit = sel.fallback ? 12 : DEPARTURES_SHOWN;
     var rows = '';
-    for (var i = 0; i < svcs.length && i < DEPARTURES_SHOWN; i++) {
+    for (var i = 0; i < svcs.length && i < limit; i++) {
       var s = svcs[i];
       if (!s) continue;
       var cancelled = (s.isCancelled === true || str(s.etd) === 'Cancelled');
       var plat = str(s.platform);
+      var lon = isLondonBound(s);
       rows += '<div class="trow' + (cancelled ? ' off' : '') + '">' +
         '<div class="tstd">' + (str(s.std) || '—') + '</div>' +
-        '<div class="tdest">' + (destLabel(s) || '—') + '</div>' +
+        '<div class="tdest ' + (lon ? 'lon' : 'other') + '">' + (destLabel(s) || '—') + '</div>' +
         '<div class="tplat">' + (plat ? plat : '—') + '</div>' +
         '<div class="tstat">' + statusCell(s) + '</div>' +
       '</div>';
     }
+    var notes = '';
+    if (sel.fallback) {
+      notes += '<div class="tnote" id="fallnote">No direct London services — showing all departures.</div>';
+    }
+    var nrcc = firstNrcc(feed);
+    if (nrcc) { notes += '<div class="tnote">' + nrcc + '</div>'; }
     if (!rows) {
-      rows = '<div class="unavail">No departures listed.</div>';
+      rows = '<div class="unavail">No departures listed right now.</div>';
     }
     var fresh = feed.stale
       ? 'As of ' + (feed.at || '—') + ' — not refreshed since'
       : 'Updated ' + (feed.at || '—');
-    return '<div class="panel">' + head +
+    return '<div class="panel">' + panelTitle(sel.fallback) + notes +
       '<div class="trow thead"><div>Departs</div><div>Destination</div><div>Plat</div><div>Status</div></div>' +
-      '<div class="tbody">' + rows + '</div>' +
+      '<div class="tbody' + (sel.fallback ? ' dense' : '') + '">' + rows + '</div>' +
       '<div class="freshness">' + fresh + '</div>' +
     '</div>';
   }
 
   function wxColumnHTML(name, feed) {
-    if (!feed.ok || !feed.data) { return ''; }
+    if (!feed.ok || !feed.data) {
+      // One location failing must not take the other down with it.
+      return '<div class="wx">' +
+        '<div class="wxname">' + name + '</div>' +
+        '<div class="unavail">' + (feed.loading ? 'Fetching…' : 'No forecast') + '</div>' +
+      '</div>';
+    }
     var w = feed.data;
     var t = temp(w), hi = dailyVal(w, 'temperature_2m_max'), lo = dailyVal(w, 'temperature_2m_min');
     var prob = dailyVal(w, 'precipitation_probability_max');
@@ -924,11 +1003,17 @@
 
   function weatherPanelHTML(feeds) {
     var head = '<div class="ptitle">Today</div>';
-    var anyOk = false, i;
-    for (i = 0; i < feeds.length; i++) { if (feeds[i].feed.ok) anyOk = true; }
+    var anyOk = false, anyLoading = false, i;
+    for (i = 0; i < feeds.length; i++) {
+      if (feeds[i].feed.ok) { anyOk = true; }
+      if (feeds[i].feed.loading) { anyLoading = true; }
+    }
     if (!anyOk) {
       return '<div class="panel">' + head +
-        '<div class="unavail">Weather isn’t coming through at the moment.<br>Trains are unaffected.</div>' +
+        '<div class="unavail">' + (anyLoading
+          ? 'Fetching forecast…'
+          : 'Weather isn’t coming through at the moment.<br>Trains are unaffected.') +
+        '</div>' +
       '</div>';
     }
     var cols = '';
@@ -946,23 +1031,35 @@
     '</div>';
   }
 
+  /* The fallback board can be long and the notes above it vary in height, so the
+     row count is measured, not assumed — and the note says what is really shown. */
+  function fitTrainRows() {
+    var tb = document.querySelector('.tbody.dense');
+    if (!tb || !tb.children || !tb.children.length) return;
+    var first = tb.children[0];
+    var rh = first.offsetHeight;
+    if (!rh) return;
+    var total = tb.children.length;
+    var fits = Math.floor(tb.clientHeight / rh);
+    if (fits < 1) fits = 1;
+    while (tb.children.length > fits) { tb.removeChild(tb.children[tb.children.length - 1]); }
+    var note = document.getElementById('fallnote');
+    if (note && tb.children.length < total) {
+      note.innerHTML = 'No direct London services — showing the next ' + tb.children.length +
+        ' of ' + total + ' departures.';
+    }
+  }
+
   function dashHTML() {
     var tFeed = trainFeed();
     var wFeeds = [];
     for (var i = 0; i < LOCATIONS.length; i++) {
       wFeeds.push({ name: LOCATIONS[i].name, feed: weatherFeed(LOCATIONS[i].key) });
     }
-    var states = '';
-    for (var s = 0; s < DASH_STATES.length; s++) {
-      states += '<button class="dstate' + (dashState === DASH_STATES[s].id ? ' sel' : '') +
-        '" data-act="dstate" data-id="' + DASH_STATES[s].id + '">' + DASH_STATES[s].label + '</button>';
-    }
     return '<div class="dash fadein">' +
-      '<h1 class="dverdict">' + verdictText(tFeed, wFeeds) + '</h1>' +
       '<div class="dbody">' + trainPanelHTML(tFeed) + weatherPanelHTML(wFeeds) + '</div>' +
       '<div class="dfoot">' +
         '<button class="dback" data-act="back">Back to routine</button>' +
-        '<div class="dstates"><em>Preview state</em>' + states + '</div>' +
       '</div>' +
     '</div>';
   }
@@ -972,7 +1069,7 @@
     document.body.className = 't-' + (themeOverride || p.theme);
     if (view === 'all') { app.innerHTML = allHTML(); return; }
     if (view === 'parent') { app.innerHTML = parentHTML(); return; }
-    if (view === 'dash') { app.innerHTML = dashHTML(); return; }
+    if (view === 'dash') { app.innerHTML = dashHTML(); fitTrainRows(); return; }
 
     app.innerHTML = ambientHTML() + '<div class="stage" id="stage">' + stepPaneHTML() + '</div>' + dotsHTML();
   }
@@ -1020,8 +1117,7 @@
     if (act === 'park') { var id = currentId(); advance(function () { park(id); }); return; }
     if (act === 'all') { view = 'all'; render(); return; }
     if (act === 'parent') { view = 'parent'; render(); return; }
-    if (act === 'dash') { view = 'dash'; render(); armIdle(); startTrainPolling(); return; }
-    if (act === 'dstate') { dashState = el.getAttribute('data-id'); render(); return; }
+    if (act === 'dash') { view = 'dash'; render(); armIdle(); startTrainPolling(); startWeatherPolling(); return; }
     if (act === 'back') { saveParentFields(); view = 'step'; render(); return; }
     if (act === 'theme') { p.theme = el.getAttribute('data-id'); themeOverride = null; writeStore(); render(); return; }
     if (act === 'celeb') { p.celebrate = !p.celebrate; writeStore(); render(); return; }

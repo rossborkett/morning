@@ -147,6 +147,7 @@
            box-shadow: 0 6px 16px rgba(60,48,36,.07); display:flex; flex-direction:column; min-height:0; }
   .ptitle { flex:0 0 auto; font-size:17px; letter-spacing:1.4px; text-transform:uppercase;
             color: var(--soft); margin:0 0 12px 0; font-weight:600; }
+  .ptitle.tomorrow { margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
   .trow { display:grid; grid-template-columns: 118px 1fr 50px 130px; grid-gap:10px; align-items:center; }
   .thead { font-size:16px; letter-spacing:1.2px; text-transform:uppercase; color: var(--soft);
            padding-bottom:8px; border-bottom:1px solid var(--line); }
@@ -172,18 +173,19 @@
   .tstat .was { color: var(--soft); text-decoration: line-through; margin-left:8px; font-size:20px; }
   .off { opacity:.45; }
   .off .tstd { text-decoration: line-through; }
-  .freshness { flex:0 0 auto; font-size:17px; color: var(--soft); padding-top:10px; }
-  .wxgrid { flex:1 1 auto; display:grid; grid-template-columns:1fr 1fr; grid-gap:16px; min-height:0; }
+  .freshness { flex:0 0 auto; font-size:17px; color: var(--soft); padding-top:10px; margin-top:auto; }
+  .wxgrid { flex:0 0 auto; display:grid; grid-template-columns:1fr 1fr; grid-gap:16px; }
   .wx { display:flex; flex-direction:column; }
   .wxname { font-size:19px; font-weight:600; margin-bottom:10px; }
   .wxtop { display:flex; flex-direction:row; align-items:center; margin-bottom:8px; }
   .wxtemp { font-size:52px; font-weight:600; letter-spacing:-2px; font-variant-numeric: tabular-nums; }
+  .wxtemp.small { font-size:34px; letter-spacing:-1px; }
   .wxicon { color: var(--soft); margin-right:10px; flex:0 0 auto; }
   .wxcond { font-size:19px; color: var(--soft); margin-bottom:12px; }
   .wxhl { font-size:20px; font-variant-numeric: tabular-nums; margin-bottom:12px; }
   .wxhl b { font-weight:600; }
   .wxhl span { color: var(--soft); margin-left:10px; }
-  .wxrain { font-size:19px; line-height:1.35; margin-top:auto; padding-top:10px; border-top:1px solid var(--line); }
+  .wxrain { font-size:19px; line-height:1.35; margin-top:8px; padding-top:10px; border-top:1px solid var(--line); }
   .wxrain b { font-weight:600; }
   .wxrain .quiet { color: var(--soft); }
   .unavail { flex:1 1 auto; display:flex; align-items:center; justify-content:center;
@@ -477,9 +479,9 @@
     return WEATHER_URL +
       '?latitude=' + loc.lat + '&longitude=' + loc.lon +
       '&current=temperature_2m,weather_code' +
-      '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code' +
       '&hourly=precipitation_probability' +
-      '&timezone=Europe%2FLondon&forecast_days=1';
+      '&timezone=Europe%2FLondon&forecast_days=2';
   }
   function readWeatherCache() {
     try {
@@ -606,23 +608,33 @@
     if (!w || !w.current) return null;
     return num(w.current.weather_code);
   }
-  function dailyVal(w, field) {
+  function dailyVal(w, field, day) {
     if (!w || !w.daily) return null;
-    return num(arrAt(w.daily[field], 0));
+    return num(arrAt(w.daily[field], day ? day : 0));
   }
-  // First hour from now at or above the rain threshold, as "HH:MM". Null if none.
-  // The live feed starts at 00:00, so hours already gone are skipped.
-  function rainOnset(w) {
+  // Date stamp for a forecast day, e.g. "2026-08-18". Null if the feed omits it.
+  function dayStamp(w, day) {
+    if (!w || !w.daily) return null;
+    var s = str(arrAt(w.daily.time, day ? day : 0));
+    if (!s) return null;
+    var m = /^(\d{4}-\d{2}-\d{2})/.exec(s);
+    return m ? m[1] : null;
+  }
+  // First hour of the given day at or above the rain threshold, as "HH:MM".
+  // For today, hours already gone are skipped; the feed starts at 00:00.
+  function rainOnset(w, day) {
     if (!w || !w.hourly) return null;
     var t = w.hourly.time, p = w.hourly.precipitation_probability;
     if (!t || !p || !t.length) return null;
+    var stamp = dayStamp(w, day);
     var nowH = (new Date()).getHours();
     for (var i = 0; i < t.length && i < p.length; i++) {
       var s = str(t[i]);
       if (!s) continue;
+      if (stamp && s.indexOf(stamp) !== 0) continue;
       var m = /T(\d{2}):(\d{2})/.exec(s);
       if (!m) continue;
-      if (parseInt(m[1], 10) < nowH) continue;
+      if (!day && parseInt(m[1], 10) < nowH) continue;
       if (num(p[i]) !== null && p[i] >= RAIN_LIKELY_PCT) { return m[1] + ':' + m[2]; }
     }
     return null;
@@ -987,66 +999,86 @@
     '</div>';
   }
 
-  function wxColumnHTML(name, feed) {
+  // Tomorrow's line stays on one row \u2014 two two-line blocks would overflow the panel.
+  function rainLine(prob, onset, dayWord, oneLine) {
+    if (prob === null) { return '<span class="quiet">Rain chance unknown</span>'; }
+    if (prob >= RAIN_LIKELY_PCT) {
+      var lead = onset ? 'Rain likely from ' + onset : 'Rain likely ' + dayWord;
+      var tail = onset ? Math.round(prob) + '% ' + dayWord : Math.round(prob) + '%, timing unclear';
+      if (oneLine) {
+        return '<b>' + (onset ? 'Rain from ' + onset : 'Rain likely') + '</b>' +
+          '<span class="quiet"> \u00b7 ' + Math.round(prob) + '%</span>';
+      }
+      return '<b>' + lead + '</b><br><span class="quiet">' + tail + '</span>';
+    }
+    return '<span class="quiet">Rain unlikely \u00b7 ' + Math.round(prob) + '%</span>';
+  }
+
+  // day 0 leads on the current temperature; day 1 has no "current", so it leads
+  // on the high. Rain sits directly under the numbers, not pushed to the bottom.
+  function wxColumnHTML(name, feed, day) {
     if (!feed.ok || !feed.data) {
       // One location failing must not take the other down with it.
       return '<div class="wx">' +
         '<div class="wxname">' + name + '</div>' +
-        '<div class="unavail">' + (feed.loading ? 'Fetching…' : 'No forecast') + '</div>' +
+        '<div class="unavail">' + (feed.loading ? 'Fetching\u2026' : 'No forecast') + '</div>' +
       '</div>';
     }
     var w = feed.data;
-    var t = temp(w), hi = dailyVal(w, 'temperature_2m_max'), lo = dailyVal(w, 'temperature_2m_min');
-    var prob = dailyVal(w, 'precipitation_probability_max');
-    var onset = rainOnset(w);
-    var cond = wmo(code(w));
-    var rain;
-    if (prob === null) {
-      rain = '<span class="quiet">Rain chance unknown</span>';
-    } else if (prob >= RAIN_LIKELY_PCT) {
-      rain = onset
-        ? '<b>Rain likely from ' + onset + '</b><br><span class="quiet">' + Math.round(prob) + '% today</span>'
-        : '<b>Rain likely today</b><br><span class="quiet">' + Math.round(prob) + '%, timing unclear</span>';
+    var hi = dailyVal(w, 'temperature_2m_max', day), lo = dailyVal(w, 'temperature_2m_min', day);
+    var prob = dailyVal(w, 'precipitation_probability_max', day);
+    var onset = rainOnset(w, day);
+    var cond = wmo(day ? dailyVal(w, 'weather_code', day) : code(w));
+    var dayWord = day ? 'tomorrow' : 'today';
+    var lead, sub;
+    if (day) {
+      lead = (hi === null ? '\u2014' : Math.round(hi) + '\u00b0');
+      sub = '<div class="wxhl"><span>overnight ' + (lo === null ? '\u2014' : Math.round(lo) + '\u00b0') + '</span></div>';
     } else {
-      rain = '<span class="quiet">Rain unlikely · ' + Math.round(prob) + '%</span>';
+      var t = temp(w);
+      lead = (t === null ? '\u2014' : Math.round(t * 10) / 10 + '\u00b0');
+      sub = '<div class="wxcond">' + cond.label + '</div>' +
+        '<div class="wxhl"><b>' + (hi === null ? '\u2014' : Math.round(hi) + '\u00b0') + '</b>' +
+        '<span>' + (lo === null ? '\u2014' : Math.round(lo) + '\u00b0') + '</span></div>';
     }
     return '<div class="wx">' +
       '<div class="wxname">' + name + '</div>' +
-      '<div class="wxtop">' + wxIcon(cond.icon, 40) +
-        '<div class="wxtemp">' + (t === null ? '—' : Math.round(t * 10) / 10 + '°') + '</div></div>' +
-      '<div class="wxcond">' + cond.label + '</div>' +
-      '<div class="wxhl"><b>' + (hi === null ? '—' : Math.round(hi) + '°') + '</b>' +
-        '<span>' + (lo === null ? '—' : Math.round(lo) + '°') + '</span></div>' +
-      '<div class="wxrain">' + rain + '</div>' +
+      '<div class="wxtop">' + wxIcon(cond.icon, day ? 32 : 40) +
+        '<div class="wxtemp' + (day ? ' small' : '') + '">' + lead + '</div></div>' +
+      sub +
+      '<div class="wxrain">' + rainLine(prob, onset, dayWord, day ? true : false) + '</div>' +
     '</div>';
   }
 
   function weatherPanelHTML(feeds) {
-    var head = '<div class="ptitle">Today</div>';
     var anyOk = false, anyLoading = false, i;
     for (i = 0; i < feeds.length; i++) {
       if (feeds[i].feed.ok) { anyOk = true; }
       if (feeds[i].feed.loading) { anyLoading = true; }
     }
     if (!anyOk) {
-      return '<div class="panel">' + head +
+      return '<div class="panel">' + '<div class="ptitle">Today</div>' +
         '<div class="unavail">' + (anyLoading
-          ? 'Fetching forecast…'
-          : 'Weather isn’t coming through at the moment.<br>Trains are unaffected.') +
+          ? 'Fetching forecast\u2026'
+          : 'Weather isn\u2019t coming through at the moment.<br>Trains are unaffected.') +
         '</div>' +
       '</div>';
     }
-    var cols = '';
+    var today = '', tomorrow = '';
     for (i = 0; i < feeds.length; i++) {
-      cols += wxColumnHTML(feeds[i].name, feeds[i].feed);
+      today += wxColumnHTML(feeds[i].name, feeds[i].feed, 0);
+      tomorrow += wxColumnHTML(feeds[i].name, feeds[i].feed, 1);
     }
     var at = null, stale = false;
     for (i = 0; i < feeds.length; i++) {
       if (feeds[i].feed.ok) { at = feeds[i].feed.at; stale = feeds[i].feed.stale === true; }
     }
-    var fresh = stale ? 'As of ' + (at || '—') + ' — not refreshed since' : 'Updated ' + (at || '—');
-    return '<div class="panel">' + head +
-      '<div class="wxgrid">' + cols + '</div>' +
+    var fresh = stale ? 'As of ' + (at || '\u2014') + ' \u2014 not refreshed since' : 'Updated ' + (at || '\u2014');
+    return '<div class="panel">' +
+      '<div class="ptitle">Today</div>' +
+      '<div class="wxgrid">' + today + '</div>' +
+      '<div class="ptitle tomorrow">Tomorrow</div>' +
+      '<div class="wxgrid">' + tomorrow + '</div>' +
       '<div class="freshness">' + fresh + '</div>' +
     '</div>';
   }

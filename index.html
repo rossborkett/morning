@@ -893,6 +893,26 @@
     return '<span class="quiet">' + (etd || 'On time') + '</span>';
   }
 
+  /* Board is unfiltered \u2014 all departures from LES, both directions. We prefer the
+     London-bound ones, and fall back to everything rather than go blank. */
+  function isLondonBound(svc) {
+    return destOf(svc) === DEST_NAME;
+  }
+  function selectServices(feed) {
+    var out = { list: [], fallback: false };
+    if (!feed || !feed.ok || !feed.data) return out;
+    var svcs = feed.data.trainServices;
+    if (!svcs || !svcs.length) return out;
+    var london = [], i;
+    for (i = 0; i < svcs.length; i++) {
+      if (svcs[i] && isLondonBound(svcs[i])) { london.push(svcs[i]); }
+    }
+    if (london.length) { out.list = london; return out; }
+    for (i = 0; i < svcs.length; i++) { if (svcs[i]) { out.list.push(svcs[i]); } }
+    out.fallback = out.list.length > 0;
+    return out;
+  }
+
   // nrccMessages carry embedded markup; we want the sentence, not the styling.
   function stripTags(s) {
     if (typeof s !== 'string') return null;

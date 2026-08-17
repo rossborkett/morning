@@ -135,6 +135,63 @@
   .toggle.on b { left:54px; }
   .pnote { flex:0 0 auto; font-size:19px; color: var(--soft); margin-top:12px; line-height:1.5; }
 
+  /* ---------- dad dashboard ---------- */
+  .todash { flex:0 0 auto; margin-left:22px; height:38px; padding:0 16px; border-radius:19px;
+            color: var(--soft); font-size:19px; opacity:.5;
+            display:flex; align-items:center; justify-content:center; box-shadow: inset 0 0 0 1px var(--line); }
+  .todash:active { opacity:.85; }
+  .dash { position:fixed; top:0; left:0; right:0; bottom:0; background: var(--bg);
+          display:flex; flex-direction:column; padding:22px 30px 18px 30px; box-sizing:border-box; }
+  .dverdict { flex:0 0 auto; font-size:36px; font-weight:600; letter-spacing:-0.6px; line-height:1.2;
+              margin:0 0 18px 0; text-wrap:pretty; }
+  .dbody { flex:1 1 auto; display:grid; grid-template-columns: 1.5fr 1fr; grid-gap:18px; min-height:0; }
+  .panel { background: var(--surface); border-radius:26px; padding:22px 24px 18px 24px; box-sizing:border-box;
+           box-shadow: 0 6px 16px rgba(60,48,36,.07); display:flex; flex-direction:column; min-height:0; }
+  .ptitle { flex:0 0 auto; font-size:17px; letter-spacing:1.4px; text-transform:uppercase;
+            color: var(--soft); margin:0 0 12px 0; font-weight:600; }
+  .trow { display:grid; grid-template-columns: 118px 1fr 50px 130px; grid-gap:10px; align-items:center; }
+  .thead { font-size:16px; letter-spacing:1.2px; text-transform:uppercase; color: var(--soft);
+           padding-bottom:8px; border-bottom:1px solid var(--line); }
+  .tbody { flex:1 1 auto; }
+  .tbody .trow { height:72px; border-bottom:1px solid var(--line); }
+  .tbody .trow:last-child { border-bottom:0; }
+  .tstd { font-size:36px; font-weight:600; letter-spacing:-0.5px; font-variant-numeric: tabular-nums; }
+  .tdest { font-size:20px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tplat { font-size:24px; color: var(--soft); font-variant-numeric: tabular-nums; }
+  .tstat { font-size:21px; }
+  .tstat .quiet { color: var(--soft); }
+  .tstat .exp { font-size:26px; font-weight:600; font-variant-numeric: tabular-nums; }
+  .tstat .was { color: var(--soft); text-decoration: line-through; margin-left:8px; font-size:20px; }
+  .off { opacity:.45; }
+  .off .tstd { text-decoration: line-through; }
+  .freshness { flex:0 0 auto; font-size:17px; color: var(--soft); padding-top:10px; }
+  .wxgrid { flex:1 1 auto; display:grid; grid-template-columns:1fr 1fr; grid-gap:16px; min-height:0; }
+  .wx { display:flex; flex-direction:column; }
+  .wxname { font-size:19px; font-weight:600; margin-bottom:10px; }
+  .wxtop { display:flex; flex-direction:row; align-items:center; margin-bottom:8px; }
+  .wxtemp { font-size:52px; font-weight:600; letter-spacing:-2px; font-variant-numeric: tabular-nums; }
+  .wxicon { color: var(--soft); margin-right:10px; flex:0 0 auto; }
+  .wxcond { font-size:19px; color: var(--soft); margin-bottom:12px; }
+  .wxhl { font-size:20px; font-variant-numeric: tabular-nums; margin-bottom:12px; }
+  .wxhl b { font-weight:600; }
+  .wxhl span { color: var(--soft); margin-left:10px; }
+  .wxrain { font-size:19px; line-height:1.35; margin-top:auto; padding-top:10px; border-top:1px solid var(--line); }
+  .wxrain b { font-weight:600; }
+  .wxrain .quiet { color: var(--soft); }
+  .unavail { flex:1 1 auto; display:flex; align-items:center; justify-content:center;
+             color: var(--soft); font-size:20px; text-align:center; line-height:1.5; padding:0 20px; }
+  .dfoot { flex:0 0 auto; display:flex; flex-direction:row; align-items:center; justify-content:space-between;
+           margin-top:14px; height:44px; }
+  .dback { height:44px; padding:0 22px; border-radius:22px; color: var(--ink); font-size:21px;
+           box-shadow: inset 0 0 0 1px var(--line); display:flex; align-items:center; }
+  .dback:active { opacity:.6; }
+  .dstates { display:flex; flex-direction:row; align-items:center; opacity:.55; }
+  .dstates em { font-style:normal; font-size:15px; color: var(--soft); letter-spacing:1px;
+                text-transform:uppercase; margin-right:12px; }
+  .dstate { height:34px; padding:0 14px; margin-left:6px; border-radius:17px; font-size:16px;
+            color: var(--soft); box-shadow: inset 0 0 0 1px var(--line); display:flex; align-items:center; }
+  .dstate.sel { color: var(--surface); background: var(--soft); box-shadow:none; }
+
   /* ================= warm, elevated ================= */
   body.t-sand { --bg:#f0e8dd; }
   body.t-sage  { --bg:#e7ece3; }
@@ -195,6 +252,24 @@
     { id: 'socks',     label: 'Socks on',    tint: '#eed8cb' },
     { id: 'shoes',     label: 'Shoes on',    tint: '#dcd8ce' }
   ];
+
+  /* ---- dad dashboard: route + locations. Change these, nothing else. ---- */
+  var ORIGIN_CRS = 'LES';                    // Leigh-on-Sea
+  var ORIGIN_NAME = 'Leigh-on-Sea';
+  var DEST_CRS = 'FST';                      // London Fenchurch Street
+  var DEST_NAME = 'London Fenchurch Street';
+  var OPERATOR = 'c2c';
+  var DEPARTURES_SHOWN = 5;
+  var TRAIN_FEED_URL = 'https://withered-queen-a95c.rossborkett.workers.dev/';
+  var TRAIN_CACHE_KEY = 'morning.trains.v1';
+  var TRAIN_POLL_MS = 60000;                 // refresh cadence while the dashboard is open
+  var LOCATIONS = [
+    { key: 'leigh',  name: 'Leigh-on-Sea', lat: 51.5424, lon:  0.6543 },
+    { key: 'london', name: 'London',       lat: 51.5074, lon: -0.1278 }
+  ];
+  var STALE_AFTER_MIN = 15;
+  var RAIN_LIKELY_PCT = 50;                  // at or above this, we name the hour
+  var IDLE_RETURN_MS = 120000;               // dashboard hands the tablet back after 2 minutes
 
   var reduced = false;
   try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
@@ -288,6 +363,251 @@
       'stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>';
   }
 
+  /* ------------------------------------------------------------- train feed
+     Live from the Worker, LDBWS shape. Last good response is cached in
+     localStorage so a cold morning with no network still shows yesterday's
+     board behind a stale marker rather than a blank panel. Every read guarded;
+     no optional chaining — iOS 12 Safari. */
+  var trainLive = { data: null, fetchedAt: null, failed: false, loading: false };
+
+  function hhmm(ms) {
+    var d = new Date(ms);
+    var h = d.getHours(), m = d.getMinutes();
+    return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+  }
+  function readTrainCache() {
+    try {
+      var raw = window.localStorage.getItem(TRAIN_CACHE_KEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      if (o && o.data && typeof o.fetchedAt === 'number') return o;
+    } catch (e) {}
+    return null;
+  }
+  function writeTrainCache(payload, when) {
+    try {
+      window.localStorage.setItem(TRAIN_CACHE_KEY, JSON.stringify({ data: payload, fetchedAt: when }));
+    } catch (e) {}
+  }
+
+  // The Worker may hand back the board bare or wrapped; accept the usual shapes.
+  function boardFrom(json) {
+    if (!json || typeof json !== 'object') return null;
+    if (json.trainServices) return json;
+    if (json.data && json.data.trainServices) return json.data;
+    if (json.GetStationBoardResult && json.GetStationBoardResult.trainServices) {
+      return json.GetStationBoardResult;
+    }
+    return null;
+  }
+
+  function fetchTrains() {
+    if (trainLive.loading) return;
+    trainLive.loading = true;
+    var req = new XMLHttpRequest();
+    var done = false;
+    function settle(board) {
+      if (done) return;
+      done = true;
+      trainLive.loading = false;
+      if (board) {
+        var now = (new Date()).getTime();
+        trainLive.data = board;
+        trainLive.fetchedAt = now;
+        trainLive.failed = false;
+        writeTrainCache(board, now);
+      } else {
+        trainLive.failed = true;                 // cached data, if any, still stands
+      }
+      if (view === 'dash') { render(); }
+    }
+    req.onreadystatechange = function () {
+      if (req.readyState !== 4) return;
+      var board = null;
+      if (req.status >= 200 && req.status < 300) {
+        try { board = boardFrom(JSON.parse(req.responseText)); } catch (e) { board = null; }
+      }
+      settle(board);
+    };
+    req.onerror = function () { settle(null); };
+    req.ontimeout = function () { settle(null); };
+    try {
+      req.open('GET', TRAIN_FEED_URL, true);
+      req.timeout = 12000;
+      req.send();
+    } catch (e) { settle(null); }
+  }
+
+  var trainPoll = null;
+  function startTrainPolling() {
+    fetchTrains();
+    if (trainPoll) return;
+    trainPoll = window.setInterval(function () {
+      if (view === 'dash') { fetchTrains(); }
+    }, TRAIN_POLL_MS);
+  }
+
+  /* Stubs remain, driving the preview-state switcher only. */
+  function trainStub() {
+    return {
+      generatedAt: '07:14',
+      trainServices: [
+        { std: '07:42', etd: 'On time', platform: '2',
+          destination: [{ locationName: DEST_NAME }], operator: OPERATOR, isCancelled: false },
+        { std: '07:48', etd: 'On time', platform: '1',
+          destination: [{ locationName: DEST_NAME }], operator: OPERATOR, isCancelled: false },
+        { std: '07:56', etd: '08:07', platform: '3',
+          destination: [{ locationName: DEST_NAME }], operator: OPERATOR, isCancelled: false },
+        { std: '08:02', etd: 'Delayed', platform: null,
+          destination: [{ locationName: DEST_NAME }], operator: OPERATOR, isCancelled: false },
+        { std: '08:11', etd: 'Cancelled', platform: '2',
+          destination: [{ locationName: DEST_NAME }], operator: OPERATOR, isCancelled: true }
+      ]
+    };
+  }
+  function hoursFrom(start, probs) {
+    var t = [], i, h;
+    for (i = 0; i < probs.length; i++) {
+      h = start + i;
+      t.push('2026-08-16T' + (h < 10 ? '0' + h : h) + ':00');
+    }
+    return { time: t, precipitation_probability: probs };
+  }
+  function weatherStub(key) {
+    if (key === 'leigh') {
+      return {
+        current: { temperature_2m: 14.2, weather_code: 3 },
+        daily: { temperature_2m_max: [17.1], temperature_2m_min: [9.4], precipitation_probability_max: [70] },
+        hourly: hoursFrom(7, [5, 5, 10, 10, 15, 20, 30, 55, 70, 65, 40, 20, 10])
+      };
+    }
+    return {
+      current: { temperature_2m: 15.6, weather_code: 2 },
+      daily: { temperature_2m_max: [18.4], temperature_2m_min: [11.0], precipitation_probability_max: [20] },
+      hourly: hoursFrom(7, [0, 0, 5, 5, 10, 10, 15, 20, 20, 15, 10, 5, 0])
+    };
+  }
+
+  // 'live' = real feed. The rest force a preview of a failure state.
+  var dashState = 'live';
+  var DASH_STATES = [
+    { id: 'live',        label: 'Live' },
+    { id: 'stale',       label: 'Stale' },
+    { id: 'trainsdown',  label: 'Trains down' },
+    { id: 'weatherdown', label: 'Weather down' }
+  ];
+
+  function trainFeed() {
+    if (dashState === 'trainsdown') { return { ok: false, at: null, data: null }; }
+    if (dashState === 'stale') {
+      return { ok: true, at: '07:02', stale: true, data: trainStub() };
+    }
+    if (!trainLive.data) {
+      // Nothing cached and nothing fetched yet.
+      return { ok: false, at: null, data: null, loading: trainLive.loading && !trainLive.failed };
+    }
+    var age = ((new Date()).getTime() - trainLive.fetchedAt) / 60000;
+    return {
+      ok: true,
+      at: hhmm(trainLive.fetchedAt),
+      stale: trainLive.failed || age >= STALE_AFTER_MIN,
+      data: trainLive.data
+    };
+  }
+  function weatherFeed(key) {
+    if (dashState === 'weatherdown') { return { ok: false, at: null, data: null }; }
+    return { ok: true, at: dashState === 'stale' ? '07:02' : '07:14',
+             stale: dashState === 'stale', data: weatherStub(key) };
+  }
+
+  /* ------------------------------------------------------- guarded accessors */
+  function num(v) { return (typeof v === 'number' && isFinite(v)) ? v : null; }
+  function str(v) { return (typeof v === 'string' && v.length) ? v : null; }
+  function arrAt(a, i) { return (a && a.length > i) ? a[i] : null; }
+  function isTimeLike(s) { return typeof s === 'string' && /^\d{1,2}:\d{2}$/.test(s); }
+
+  function destOf(svc) {
+    if (!svc || !svc.destination) return null;
+    var d = arrAt(svc.destination, 0);
+    return (d && str(d.locationName)) ? d.locationName : null;
+  }
+  // Board convention: "London " is redundant prefix on a London-bound board.
+  function destLabel(svc) {
+    var full = destOf(svc);
+    if (!full) return null;
+    return full.indexOf('London ') === 0 ? full.slice(7) : full;
+  }
+  function temp(w) {
+    if (!w || !w.current) return null;
+    return num(w.current.temperature_2m);
+  }
+  function code(w) {
+    if (!w || !w.current) return null;
+    return num(w.current.weather_code);
+  }
+  function dailyVal(w, field) {
+    if (!w || !w.daily) return null;
+    return num(arrAt(w.daily[field], 0));
+  }
+  // First hour today at or above the rain threshold, as "HH:MM". Null if none.
+  function rainOnset(w) {
+    if (!w || !w.hourly) return null;
+    var t = w.hourly.time, p = w.hourly.precipitation_probability;
+    if (!t || !p || !t.length) return null;
+    for (var i = 0; i < t.length && i < p.length; i++) {
+      if (num(p[i]) !== null && p[i] >= RAIN_LIKELY_PCT) {
+        var s = str(t[i]);
+        if (!s) return null;
+        var m = /T(\d{2}:\d{2})/.exec(s);
+        return m ? m[1] : null;
+      }
+    }
+    return null;
+  }
+
+  /* ----------------------------------------------------- WMO code -> reading */
+  var WMO = [
+    { codes: [0],              label: 'Clear',          icon: 'sun' },
+    { codes: [1],              label: 'Mainly clear',   icon: 'sun' },
+    { codes: [2],              label: 'Partly cloudy',  icon: 'partly' },
+    { codes: [3],              label: 'Overcast',       icon: 'cloud' },
+    { codes: [45, 48],         label: 'Fog',            icon: 'fog' },
+    { codes: [51, 53, 55, 56, 57], label: 'Drizzle',    icon: 'drizzle' },
+    { codes: [61, 63, 66],     label: 'Rain',           icon: 'rain' },
+    { codes: [65, 67],         label: 'Heavy rain',     icon: 'rain' },
+    { codes: [71, 73, 75, 77, 85, 86], label: 'Snow',   icon: 'snow' },
+    { codes: [80, 81, 82],     label: 'Showers',        icon: 'drizzle' },
+    { codes: [95, 96, 99],     label: 'Thunderstorms',  icon: 'storm' }
+  ];
+  function wmo(c) {
+    if (c === null) return { label: 'Unknown', icon: 'cloud' };
+    for (var i = 0; i < WMO.length; i++) {
+      if (WMO[i].codes.indexOf(c) !== -1) return WMO[i];
+    }
+    return { label: 'Unknown', icon: 'cloud' };
+  }
+
+  var CLOUD = '<path d="M20 44h22a11 11 0 0 0 1-22 15 15 0 0 0-28-4 10 10 0 0 0 5 26z" ' +
+              'fill="rgba(0,0,0,.07)" stroke="currentColor" stroke-width="3"/>';
+  var WXART = {
+    sun:  '<circle cx="32" cy="32" r="12" fill="rgba(0,0,0,.07)" stroke="currentColor" stroke-width="3"/>' +
+          '<path d="M32 8v6M32 50v6M8 32h6M50 32h6M15 15l4 4M45 45l4 4M49 15l-4 4M19 45l-4 4" ' +
+          'stroke="currentColor" stroke-width="3"/>',
+    partly: '<circle cx="24" cy="22" r="9" fill="rgba(0,0,0,.07)" stroke="currentColor" stroke-width="3"/>' +
+          '<path d="M24 6v4M8 22h4M12 10l3 3M36 10l-3 3" stroke="currentColor" stroke-width="3"/>' + CLOUD,
+    cloud: CLOUD,
+    fog:  CLOUD + '<path d="M14 52h36M20 58h26" stroke="currentColor" stroke-width="3"/>',
+    drizzle: CLOUD + '<path d="M24 50l-3 7M34 50l-3 7" stroke="currentColor" stroke-width="3"/>',
+    rain: CLOUD + '<path d="M22 50l-4 9M32 50l-4 9M42 50l-4 9" stroke="currentColor" stroke-width="3"/>',
+    snow: CLOUD + '<path d="M22 52v6M19 55h6M38 52v6M35 55h6" stroke="currentColor" stroke-width="3"/>',
+    storm: CLOUD + '<path d="M32 48l-8 10h8l-4 8" stroke="currentColor" stroke-width="3" fill="none"/>'
+  };
+  function wxIcon(name, size) {
+    var body = WXART[name] || WXART.cloud;
+    return '<svg class="wxicon" width="' + size + '" height="' + size + '" viewBox="0 0 64 64" fill="none" ' +
+      'stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>';
+  }
+
   /* ------------------------------------------------------------------ state */
   var data = null;
 
@@ -320,6 +640,8 @@
   }
 
   function boot() {
+    var cached = readTrainCache();      // board on screen immediately, refreshed after
+    if (cached) { trainLive.data = boardFrom(cached.data); trainLive.fetchedAt = cached.fetchedAt; }
     var stored = readStore();
     if (!stored || !stored.profiles || !stored.profiles[ACTIVE_PROFILE]) {
       data = { profiles: {} };
@@ -387,7 +709,7 @@
   }
 
   /* ----------------------------------------------------------------- render */
-  var view = 'step';                    // 'step' | 'all' | 'parent'
+  var view = 'step';                    // 'step' | 'all' | 'parent' | 'dash'
   var app = document.getElementById('app');
 
   function ambientHTML() {
@@ -395,6 +717,7 @@
     return '<div class="ambient">' +
       '<div class="track"><div class="fill" id="fill" style="width:' + f + '%"></div></div>' +
       '<div class="door">' + art('door', 34) + '</div>' +
+      '<button class="todash" data-act="dash">Today</button>' +
     '</div>';
   }
 
@@ -482,11 +805,175 @@
     '</div>';
   }
 
+  /* -------------------------------------------------------- dad dashboard */
+  function statusCell(svc) {
+    if (!svc) return '<span class="quiet">—</span>';
+    var etd = str(svc.etd);
+    if (svc.isCancelled === true || etd === 'Cancelled') {
+      return '<span class="quiet">Cancelled</span>';
+    }
+    if (isTimeLike(etd)) {
+      return '<span class="exp">' + etd + '</span><span class="was">' + (str(svc.std) || '') + '</span>';
+    }
+    if (etd === 'Delayed') { return 'Delayed'; }
+    return '<span class="quiet">' + (etd || 'On time') + '</span>';
+  }
+
+  function nextDeparture(feed) {
+    if (!feed || !feed.ok || !feed.data) return null;
+    var svcs = feed.data.trainServices;
+    if (!svcs || !svcs.length) return null;
+    for (var i = 0; i < svcs.length; i++) {
+      var s = svcs[i];
+      if (!s || s.isCancelled === true || str(s.etd) === 'Cancelled') continue;
+      return isTimeLike(s.etd) ? str(s.etd) : str(s.std);
+    }
+    return null;
+  }
+
+  function verdictText(tFeed, wFeeds) {
+    var parts = [], wet = null, i, w, prob, onset;
+    for (i = 0; i < wFeeds.length; i++) {
+      w = wFeeds[i];
+      if (!w.feed.ok || !w.feed.data) continue;
+      prob = dailyVal(w.feed.data, 'precipitation_probability_max');
+      onset = rainOnset(w.feed.data);
+      if (prob !== null && prob >= RAIN_LIKELY_PCT && !wet) {
+        wet = { name: w.name, onset: onset };
+      }
+    }
+    var anyWeather = false;
+    for (i = 0; i < wFeeds.length; i++) { if (wFeeds[i].feed.ok) anyWeather = true; }
+
+    if (wet) {
+      parts.push('Coat and umbrella — rain' + (wet.onset ? ' from ' + wet.onset : '') + ' in ' + wet.name + '.');
+    } else if (anyWeather) {
+      parts.push('Mild, no rain.');
+    }
+    var next = nextDeparture(tFeed);
+    if (next) { parts.push('Next train ' + next + '.'); }
+    else if (!tFeed.ok) { parts.push('Train times unavailable — leave on the usual one.'); }
+    if (!parts.length) { return 'Nothing to report yet.'; }
+    return parts.join(' ');
+  }
+
+  function trainPanelHTML(feed) {
+    var head = '<div class="ptitle">' + ORIGIN_NAME + ' → ' + DEST_NAME + ' · ' + OPERATOR + '</div>';
+    if (!feed.ok || !feed.data) {
+      return '<div class="panel">' + head +
+        '<div class="unavail">' + (feed.loading
+          ? 'Fetching departures…'
+          : 'Train times aren’t coming through at the moment.<br>Weather is unaffected.') +
+        '</div>' +
+      '</div>';
+    }
+    var svcs = feed.data.trainServices || [];
+    var rows = '';
+    for (var i = 0; i < svcs.length && i < DEPARTURES_SHOWN; i++) {
+      var s = svcs[i];
+      if (!s) continue;
+      var cancelled = (s.isCancelled === true || str(s.etd) === 'Cancelled');
+      var plat = str(s.platform);
+      rows += '<div class="trow' + (cancelled ? ' off' : '') + '">' +
+        '<div class="tstd">' + (str(s.std) || '—') + '</div>' +
+        '<div class="tdest">' + (destLabel(s) || '—') + '</div>' +
+        '<div class="tplat">' + (plat ? plat : '—') + '</div>' +
+        '<div class="tstat">' + statusCell(s) + '</div>' +
+      '</div>';
+    }
+    if (!rows) {
+      rows = '<div class="unavail">No departures listed.</div>';
+    }
+    var fresh = feed.stale
+      ? 'As of ' + (feed.at || '—') + ' — not refreshed since'
+      : 'Updated ' + (feed.at || '—');
+    return '<div class="panel">' + head +
+      '<div class="trow thead"><div>Departs</div><div>Destination</div><div>Plat</div><div>Status</div></div>' +
+      '<div class="tbody">' + rows + '</div>' +
+      '<div class="freshness">' + fresh + '</div>' +
+    '</div>';
+  }
+
+  function wxColumnHTML(name, feed) {
+    if (!feed.ok || !feed.data) { return ''; }
+    var w = feed.data;
+    var t = temp(w), hi = dailyVal(w, 'temperature_2m_max'), lo = dailyVal(w, 'temperature_2m_min');
+    var prob = dailyVal(w, 'precipitation_probability_max');
+    var onset = rainOnset(w);
+    var cond = wmo(code(w));
+    var rain;
+    if (prob === null) {
+      rain = '<span class="quiet">Rain chance unknown</span>';
+    } else if (prob >= RAIN_LIKELY_PCT) {
+      rain = onset
+        ? '<b>Rain likely from ' + onset + '</b><br><span class="quiet">' + Math.round(prob) + '% today</span>'
+        : '<b>Rain likely today</b><br><span class="quiet">' + Math.round(prob) + '%, timing unclear</span>';
+    } else {
+      rain = '<span class="quiet">Rain unlikely · ' + Math.round(prob) + '%</span>';
+    }
+    return '<div class="wx">' +
+      '<div class="wxname">' + name + '</div>' +
+      '<div class="wxtop">' + wxIcon(cond.icon, 40) +
+        '<div class="wxtemp">' + (t === null ? '—' : Math.round(t * 10) / 10 + '°') + '</div></div>' +
+      '<div class="wxcond">' + cond.label + '</div>' +
+      '<div class="wxhl"><b>' + (hi === null ? '—' : Math.round(hi) + '°') + '</b>' +
+        '<span>' + (lo === null ? '—' : Math.round(lo) + '°') + '</span></div>' +
+      '<div class="wxrain">' + rain + '</div>' +
+    '</div>';
+  }
+
+  function weatherPanelHTML(feeds) {
+    var head = '<div class="ptitle">Today</div>';
+    var anyOk = false, i;
+    for (i = 0; i < feeds.length; i++) { if (feeds[i].feed.ok) anyOk = true; }
+    if (!anyOk) {
+      return '<div class="panel">' + head +
+        '<div class="unavail">Weather isn’t coming through at the moment.<br>Trains are unaffected.</div>' +
+      '</div>';
+    }
+    var cols = '';
+    for (i = 0; i < feeds.length; i++) {
+      cols += wxColumnHTML(feeds[i].name, feeds[i].feed);
+    }
+    var at = null, stale = false;
+    for (i = 0; i < feeds.length; i++) {
+      if (feeds[i].feed.ok) { at = feeds[i].feed.at; stale = feeds[i].feed.stale === true; }
+    }
+    var fresh = stale ? 'As of ' + (at || '—') + ' — not refreshed since' : 'Updated ' + (at || '—');
+    return '<div class="panel">' + head +
+      '<div class="wxgrid">' + cols + '</div>' +
+      '<div class="freshness">' + fresh + '</div>' +
+    '</div>';
+  }
+
+  function dashHTML() {
+    var tFeed = trainFeed();
+    var wFeeds = [];
+    for (var i = 0; i < LOCATIONS.length; i++) {
+      wFeeds.push({ name: LOCATIONS[i].name, feed: weatherFeed(LOCATIONS[i].key) });
+    }
+    var states = '';
+    for (var s = 0; s < DASH_STATES.length; s++) {
+      states += '<button class="dstate' + (dashState === DASH_STATES[s].id ? ' sel' : '') +
+        '" data-act="dstate" data-id="' + DASH_STATES[s].id + '">' + DASH_STATES[s].label + '</button>';
+    }
+    return '<div class="dash fadein">' +
+      '<h1 class="dverdict">' + verdictText(tFeed, wFeeds) + '</h1>' +
+      '<div class="dbody">' + trainPanelHTML(tFeed) + weatherPanelHTML(wFeeds) + '</div>' +
+      '<div class="dfoot">' +
+        '<button class="dback" data-act="back">Back to routine</button>' +
+        '<div class="dstates"><em>Preview state</em>' + states + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
   function render() {
     var p = profile();
     document.body.className = 't-' + (themeOverride || p.theme);
     if (view === 'all') { app.innerHTML = allHTML(); return; }
     if (view === 'parent') { app.innerHTML = parentHTML(); return; }
+    if (view === 'dash') { app.innerHTML = dashHTML(); return; }
+
     app.innerHTML = ambientHTML() + '<div class="stage" id="stage">' + stepPaneHTML() + '</div>' + dotsHTML();
   }
 
@@ -511,8 +998,19 @@
     }
   }
 
+  /* --------------------------------------------- dashboard hands itself back */
+  var idleTimer = null;
+  function armIdle() {
+    if (idleTimer) { window.clearTimeout(idleTimer); idleTimer = null; }
+    if (view !== 'dash') return;
+    idleTimer = window.setTimeout(function () {
+      if (view === 'dash') { view = 'step'; render(); }   // her routine state is untouched
+    }, IDLE_RETURN_MS);
+  }
+
   /* ------------------------------------------------------------ interaction */
   document.addEventListener('click', function (e) {
+    if (view === 'dash') { armIdle(); }
     var el = e.target.closest ? e.target.closest('[data-act]') : null;
     if (!el) return;
     var act = el.getAttribute('data-act');
@@ -522,6 +1020,8 @@
     if (act === 'park') { var id = currentId(); advance(function () { park(id); }); return; }
     if (act === 'all') { view = 'all'; render(); return; }
     if (act === 'parent') { view = 'parent'; render(); return; }
+    if (act === 'dash') { view = 'dash'; render(); armIdle(); startTrainPolling(); return; }
+    if (act === 'dstate') { dashState = el.getAttribute('data-id'); render(); return; }
     if (act === 'back') { saveParentFields(); view = 'step'; render(); return; }
     if (act === 'theme') { p.theme = el.getAttribute('data-id'); themeOverride = null; writeStore(); render(); return; }
     if (act === 'celeb') { p.celebrate = !p.celebrate; writeStore(); render(); return; }
@@ -554,6 +1054,10 @@
     writeStore();
   }
 
+
+  document.addEventListener('touchstart', function () {
+    if (view === 'dash') { armIdle(); }
+  }, false);
 
   // Appliance feel: no rubber-band scrolling, no pinch zoom.
   document.addEventListener('touchmove', function (e) {

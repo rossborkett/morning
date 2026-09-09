@@ -1082,7 +1082,10 @@
     var stickers = '';
     if (id === 'dressed') {
       var kit = kitIdsToday(ROUTINE_CHILD);
-      if (kit.indexOf('kitpe') !== -1) {
+      var sdi = todayIdx();
+      // PE kit is worn, not packed: the sticker reads the schedule directly
+      // rather than a kit step, since kitpe is retired (see RETIRED_STEPS).
+      if (sdi !== null && resolveDay(ROUTINE_CHILD, sdi).pe === true) {
         stickers += '<div class="sticker pe"><i>Today</i>PE kit</div>';
       }
       if (kit.indexOf('kitswim') !== -1) {

@@ -350,10 +350,11 @@
                 'July', 'August', 'September', 'October', 'November', 'December'];
   // Kit steps injected into the routine when today's schedule calls for them.
   var EXTRA_STEPS = [
-    { id: 'kitpe',    label: 'PE kit in bag',            tint: '#ccd8e0' },
     { id: 'kitswim',  label: 'Swimming bag by the door', tint: '#c9dfdc' },
     { id: 'kitlunch', label: 'Lunchbox in bag',          tint: '#e9dcc4' }
   ];
+  // Retired kit steps: still recognised so saved days can be cleaned up.
+  var RETIRED_STEPS = ['kitpe'];
 
   /* ---- dad dashboard: route + locations. Change these, nothing else. ---- */
   var ORIGIN_CRS = 'LES';                    // Leigh-on-Sea
@@ -448,12 +449,6 @@
       '<path d="M20 140h130c20 0 30-6 36-16" stroke="currentColor" stroke-width="10"/>' +
       '<path d="M74 78l26 18M100 78l-26 18M104 54l26 18M130 54l-26 18" stroke="currentColor" stroke-width="7"/>' +
       '<path d="M66 78l38-42" stroke="currentColor" stroke-width="8"/>',
-    /* sports duffel: handles and a dotted zip */
-    kitpe:
-      '<rect x="28" y="84" width="144" height="76" rx="38" fill="' + SHADE + '"/>' +
-      '<rect x="28" y="84" width="144" height="76" rx="38" stroke="currentColor" stroke-width="8"/>' +
-      '<path d="M56 122h88" stroke="currentColor" stroke-width="7" stroke-dasharray="2 13"/>' +
-      '<path d="M72 84c0-26 10-40 28-40s28 14 28 40" stroke="currentColor" stroke-width="8"/>',
     /* drawstring swim bag with a droplet */
     kitswim:
       '<path d="M62 76l-14 84c-2 14 8 24 22 24h60c14 0 24-10 22-24l-14-84z" fill="' + SHADE + '"/>' +
@@ -478,7 +473,7 @@
   };
 
   var FIT = { breakfast: 0.9, teeth: 0.96, hair: 0.80, dressed: 0.97, socks: 0.98, shoes: 0.88,
-              kitpe: 0.95, kitswim: 0.92, kitlunch: 0.95 };
+              kitswim: 0.92, kitlunch: 0.95 };
 
   function art(name, size) {
     var vb = (name === 'door') ? '0 0 60 68' : (name === 'up' || name === 'down') ? '0 0 40 56' : '0 0 200 200';
@@ -925,6 +920,7 @@
 
   /* ------------------------------------ kit steps fed from today's schedule */
   function isKitId(id) {
+    if (RETIRED_STEPS.indexOf(id) !== -1) return true;
     for (var i = 0; i < EXTRA_STEPS.length; i++) { if (EXTRA_STEPS[i].id === id) return true; }
     return false;
   }
@@ -932,7 +928,6 @@
     var di = todayIdx();
     if (di === null) return [];                    // weekends carry no kit
     var r = resolveDay(child, di), out = [];
-    if (r.pe) { out.push('kitpe'); }
     if (r.swimming) { out.push('kitswim'); }
     if (r.lunch === 'packed') { out.push('kitlunch'); }
     return out;
